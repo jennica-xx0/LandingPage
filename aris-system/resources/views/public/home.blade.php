@@ -4,31 +4,31 @@
 
 @section('content')
 
-    <!-- Topbar / Navbar -->
-    <x-public.navbar />
+<!-- Topbar / Navbar -->
+<x-public.navbar />
 
-    <!-- Announcement Ticker -->
-    <x-public.announcement-ticker />
+<!-- Announcement Ticker -->
+<x-public.announcement-ticker />
 
-    <!-- Hero Section -->
-    <x-public.hero />
+<!-- Hero Section -->
+<x-public.hero />
 
-    <!-- Announcements List Section -->
-   <x-public.announcements-list />
-   
-    <!-- Barangay Services Section -->
-    {{-- <x-public.services /> --}} <!-- We will add this next -->
+<!-- Announcements List Section -->
+<x-public.announcements-list />
 
-    <!-- About Us Section -->
-    {{-- <x-public.about /> --}} <!-- We will add this next -->
+<!-- Barangay Services Section -->
+<x-public.services />
 
-    <!-- Barangay Officials Section -->
-    {{-- <x-public.officials /> --}} <!-- We will add this next -->
-    
-    <!-- FAQ Section -->
-    {{-- <x-public.faq /> --}} <!-- We will add this next -->
+<!-- About Us Section -->
+<x-public.about />
 
-    <!-- Footer Section -->
-    {{-- <x-public.footer /> --}} <!-- We will add this next -->
+<!-- Barangay Officials Section -->
+<x-public.officials />
+
+<!-- FAQ Section -->
+<x-public.faq />
+
+<!-- Footer Section -->
+<x-public.footer />
 
 @endsection
