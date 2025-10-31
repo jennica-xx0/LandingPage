@@ -13,6 +13,16 @@
             'title' => 'TARA, BASA TAYO!',
             'content' => 'Alam niyo ba? May Mini Library tayo sa 2nd Floor ng Barangay Daang Bakal Hall! Bukas ito para sa lahat ng estudyante at residente ng Barangay Daang Bakal.'
         ],
+         (object)[
+            'date' => '2025-10-10',
+            'title' => 'WORLD HEALTH DAY',
+            'content' => 'Nakikiisa ang Barangay Daang Bakal sa pagdiriwang ng World Mental Health Day! Tandaan -- ang kalusugang pang-isipan ay kasinghalaga ng kalusugang pisikal.'
+        ],
+          (object)[
+            'date' => '2025-10-07',
+            'title' => 'REHAB REFERRAL DESK',
+            'content' => 'Isa sa mga serbisyong hatid ng Barangay Daang Bakal ay ang Rehab Referral Desk, na naglalayong tulungan ang ating mga kabaranggay na nangangalingan ng gabay.'
+        ],
     ];
 
     // Automatically create the ticker string by joining all the announcement titles.

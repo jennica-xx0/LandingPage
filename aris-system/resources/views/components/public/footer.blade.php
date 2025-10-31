@@ -77,6 +77,6 @@
   </div>
 
   <div class="footer footer-center p-4 border-t border-white/10">
-    <aside><p>© 2025 BARIS: Barangay Automated Record and Information System</p></aside>
+    <aside><p>© 2025 ARIS: Automated Record and Information System</p></aside>
   </div>
 </footer>
