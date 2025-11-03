@@ -1,11 +1,19 @@
-<div class="hero min-h-[70vh]" style="background-image: url(/img/home.png);">
+<div class="hero min-h-[70vh] relative" style="background-image: url(/img/home.png);">
     <div class="hero-overlay bg-opacity-20"></div>
-    <div class="hero-content text-center text-neutral-content">
+
+    <div class="w-full h-64 relative">
+        <p class="absolute top-1/2 -translate-y-1/2 right-10 sm:right-20 md:right-40 lg:right-60 xl:right-80 
+         text-base sm:text-lg md:text-xl font-medium text-white text-right mt-5">
+            We Serve and Protect.
+        </p>
+    </div>
+
+    <div
+        class="hero-content text-center text-neutral-content relative flex flex-col justify-center items-center w-full">
         <div class="max-w-2xl">
-            <!-- <p class="mb-2 text-5xl font-serif font-bold tracking-widest pb-40 pl-30">WELCOME TO</p>
-           <h1 class="mb-4 text-5xl md:text-7xl font-bold">BARANGAY DAANG BAKAL</h1> 
-            <p class="mb-6 text-lg pl-120 max-w-full">We Serve and Protect.</p> -->
-            <button class="btn btn-lg bg-blue-700 hover:bg-blue-800 text-white border-none mt-50">REGISTER TO ACCESS BARANGAY SERVICES →</button>
+            <button class="btn btn-lg bg-blue-700 hover:bg-blue-800 text-white border-none mt-50">
+                REGISTER TO ACCESS BARANGAY SERVICES →
+            </button>
         </div>
     </div>
 </div>

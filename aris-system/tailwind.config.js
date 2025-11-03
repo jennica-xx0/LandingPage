@@ -1,14 +1,19 @@
-// tailwind.config.js
 /** @type {import('tailwindcss').Config} */
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 export default {
   content: [
     "./resources/**/*.blade.php",
     "./resources/**/*.js",
-    "./resources/**/*.vue", // Keep this if you ever use Vue
   ],
- theme: {
-    extend: {},
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Barlow Semi Condensed"', ...defaultTheme.fontFamily.sans],
+        serif: ['"Barlow Semi Condensed"', ...defaultTheme.fontFamily.serif],
+        mono: ['"Barlow Semi Condensed"', ...defaultTheme.fontFamily.mono],
+      },
+    },
   },
-  // Add daisyUI plugin here
   plugins: [require("daisyui")],
 }

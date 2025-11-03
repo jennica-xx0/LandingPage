@@ -1,11 +1,12 @@
 <footer class="bg-[#134573] text-white">
   <div class="max-w-7xl mx-auto px-6 py-10">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-      <!-- LEFT: Map (smaller, responsive) -->
+   
       <section class="lg:col-span-2">
         <h6 class="footer-title text-white/90 mb-3">Our Location</h6>
 
-        <a href="https://maps.google.com/?q=Barangay+Daang+Bakal+Mandaluyong"
+        <!-- UPDATED LINK HERE -->
+        <a href="https://www.google.com/maps/place/Daang+Bakal+Barangay+Hall/@14.5916363,121.0244769,17.25z/data=!4m6!3m5!1s0x3397c9d1e1d1726f:0xbf347c81708454e1!8m2!3d14.5916105!4d121.0286076!16s%2Fg%2F1pzr9z8pz?entry=ttu"
            target="_blank" rel="noopener"
            class="block group rounded-xl overflow-hidden ring-1 ring-white/20 shadow-lg">
           <img
@@ -16,19 +17,8 @@
                    md:h-[280px] lg:h-[320px]"
             style="height:clamp(220px, 32vh, 360px);" />
         </a>
-        <!-- If you prefer an embedded map, swap the <img> with the iframe below and keep the same sizing -->
-        <!--
-        <div class="rounded-xl overflow-hidden ring-1 ring-white/20 shadow-lg">
-          <iframe
-            src="https://www.google.com/maps?q=Barangay+Daang+Bakal+Mandaluyong&output=embed"
-            class="w-full md:h-[280px] lg:h-[320px] border-0"
-            style="height:clamp(220px, 32vh, 360px);" loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade" aria-label="Google map"></iframe>
-        </div>
-        -->
       </section>
 
-      <!-- RIGHT: Content -->
       <section class="space-y-8">
         <nav>
           <h6 class="footer-title text-white/90 mb-3">Contact Us</h6>
@@ -77,6 +67,6 @@
   </div>
 
   <div class="footer footer-center p-4 border-t border-white/10">
-    <aside><p>© 2025 BARIS: Barangay Automated Record and Information System</p></aside>
+    <aside><p>© 2025 ARIS: Automated Record and Information System</p></aside>
   </div>
 </footer>

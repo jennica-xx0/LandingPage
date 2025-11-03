@@ -2,15 +2,12 @@
 <div class="bg-[#E7F0F6] py-16 px-4 sm:px-8">
     <div class="container mx-auto">
 
-        <!-- Section Heading -->
-        <h2 class="text-4xl sm:text-5xl font-black text-center mb-12 text-gray-800 tracking-wide">
+        <h2 class="text-4xl sm:text-4xl font-bold font-black text-center mb-12 tracking-wide">
             BARANGAY SERVICES
         </h2>
 
-        <!-- Services Cards Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 
-            <!-- Card 1: Barangay Clearance -->
             <div class="card shadow-lg rounded-lg bg-[#de9f98] text-white p-6 flex flex-col items-center text-center">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center">Barangay Clearance</h3>
                 <figure class="mb-4 h-40 w-full">
@@ -21,7 +18,6 @@
                 </p>
             </div>
 
-            <!-- Card 2: Barangay Certificate -->
             <div class="card shadow-lg rounded-lg bg-[#8f94ac] text-white p-6 flex flex-col items-center text-center">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center">Barangay Certificate</h3>
                 <figure class="mb-4 h-40 w-full">
@@ -32,7 +28,6 @@
                 </p>
             </div>
 
-            <!-- Card 3: Indigency Clearance -->
             <div class="card shadow-lg rounded-lg bg-[#ba9f76] text-white p-6 flex flex-col items-center text-center">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center">Indigency Clearance</h3>
                 <figure class="mb-4 h-40 w-full">
@@ -43,7 +38,6 @@
                 </p>
             </div>
 
-            <!-- Card 4: Resident Certificate -->
             <div class="card shadow-lg rounded-lg bg-[#80512c] text-white p-6 flex flex-col items-center text-center">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center">Resident Certificate</h3>
                 <figure class="mb-4 h-40 w-full">

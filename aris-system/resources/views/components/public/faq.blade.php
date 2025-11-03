@@ -3,7 +3,6 @@
 
 <body class="min-h-screen bg-base-200">
 
-  <!-- === Launcher (message icon) === -->
   <button id="faq-toggle"
     class="fixed z-50 right-[calc(1rem+env(safe-area-inset-right))]
                    bottom-[calc(1rem+env(safe-area-inset-bottom))]
@@ -18,7 +17,6 @@
     <span id="faq-dot" class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-error ring-2 ring-white"></span>
   </button>
 
-  <!-- === Chat Window === -->
   <section id="faq-chat"
     class="fixed w-80 h-[30rem] right-[calc(1rem+env(safe-area-inset-right))]
            bottom-[calc(5.5rem+env(safe-area-inset-bottom))]
@@ -67,7 +65,7 @@
   </style>
 
   <script>
-    // FAQs data
+    
     const FAQS = [
       { q: "How do I register for an account?", a: "Go to Login → Register. Fill in your details and upload a valid ID (students may use school ID). Wait for admin approval." },
       { q: "What documents can I request online?", a: "You can request: \n• Barangay Clearance\n• Barangay Certificate\n• Indigency Clearance\n• Resident Certificate" },
@@ -79,12 +77,10 @@
       { q: "What are the barangay’s curfew hours?", a: "10:00 PM–4:00 AM, unless otherwise announced." }
     ];
 
-    // Elements
     const $ = s => document.querySelector(s);
     const chat = $('#faq-chat'), body = $('#faq-body'), input = $('#faq-input');
     const chips = $('#faq-chipwrap'), toggle = $('#faq-toggle'), closeB = $('#faq-close'), dot = $('#faq-dot');
 
-    // Helpers
     const nl2br = s => (s || '').replace(/\n/g, '<br>');
     const scrollBottom = () => (body.scrollTop = body.scrollHeight);
     const bubble = (msg, who='bot') => {
@@ -126,7 +122,6 @@
       });
     };
 
-    // Events
     toggle.addEventListener('click', () => chat.classList.contains('is-open') ? close() : open());
     closeB.addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && chat.classList.contains('is-open')) close(); });
