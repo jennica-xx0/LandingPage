@@ -1,4 +1,5 @@
 @php
+    // Mock data array for the announcement list
     $announcements = [
         (object) [
             'date' => '2025-10-21',
@@ -7,7 +8,7 @@
         ],
         (object) [
             'date' => '2025-10-17',
-            'date_range' => '17-20',
+            'date_range' => '17-20', // Optional property for date ranges
             'title' => 'GUSTO MO BA MAG TUPAD?',
             'content' => 'Tara na, kabarangay! Isa itong magandang pagkakataon para sa karagdagang hanapbuhay at tulong mula sa pamahalaan.'
         ],
@@ -32,10 +33,8 @@
 <div class="bg-base-100 py-16 px-4 sm:px-8">
     <div class="container mx-auto max-w-6xl">
 
-        <h2 class="text-4xl sm:text-4xl font-bold font-black text-center mb-12 tracking-wide mb-8">ANNOUNCEMENTS</h2>
-
-        <div class="max-w-6xl mx-auto px-5 flex flex-row gap-4 items-center">
-            <img src="{{ asset('/img/announcement.png') }}" alt="Announcement Icon" class="h-15 w-15 mr-2">
+        <!-- Section Heading -->
+        <h2 class="text-4xl font-bold text-center mb-8">ANNOUNCEMENTS</h2>
 
         <!-- Search Input with Icon -->
         <div class="max-w-6xl mx-auto px-5 flex flex-row gap-4 items-center">
@@ -45,7 +44,7 @@
                 <label class="relative block w-full">
                     <span class="sr-only">Search</span>
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                       
+                        <!-- ✅ Corrected SVG -->
                         <svg class="h-5 w-5 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -58,11 +57,13 @@
             </div>
         </div>
 
+
         <!-- "ALL" Filter Button -->
         <div class="max-w-6xl mx-auto mt-6 px-5">
             <a href="#"
                 class="inline-block border-b-2 border-blue-800 text-blue-800 font-bold text-sm tracking-wider pb-1 px-2 rounded-t-md hover:bg-blue-50 transition-colors">ALL</a>
         </div>
+
         <!-- Announcements List (Dynamic) -->
         <div class="space-y-6 max-w-6xl mx-auto mt-4">
 

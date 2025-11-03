@@ -2,7 +2,8 @@
     {{-- FIX: Increased max-width from 5xl to 7xl for more horizontal space --}}
     <div class="container mx-auto max-w-7xl">
 
-        <h2 class="text-4xl sm:text-4xl font-bold font-black text-center mb-12 tracking-wide mb-12">ABOUT US</h2>
+        <h2 class="text-4xl font-bold text-center mb-12">ABOUT US</h2>
+
         {{-- FIX: Added text-sm and leading-relaxed to reduce font size and improve line spacing --}}
         <div class="prose max-w-none font-serif text-justify mb-12">
             <p class="text-l leading-relaxed">
@@ -39,10 +40,6 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="rounded-lg shadow-lg h-[450px] flex items-center justify-center overflow-hidden">
-                <img src="/img/kap1.jpg" alt="Award Poster 1" class="max-w-full max-h-full object-contain">
-            </div>
-            <div class="rounded-lg shadow-lg h-[450px] flex items-center justify-center overflow-hidden">
             <div class="rounded-lg shadow-lg h-[500px] flex items-center justify-center overflow-hidden">
                 <img src="/img/kap1.jpg" alt="Award Poster 1" class="max-w-full max-h-full object-contain">
             </div>
