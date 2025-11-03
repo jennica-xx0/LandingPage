@@ -6,17 +6,17 @@
 
 <x-public.navbar />
 
-<x-public.announcement-ticker />
+<x-public.announcement-ticker :announcements="$announcements" />
 
 <x-public.hero />
 
-<x-public.announcements-list />
+<x-public.announcements-list :announcements="$announcements" />
 
 <x-public.services />
 
 <x-public.about />
 
-<x-public.officials />
+<x-public.officials :captain="$captain" :kagawads="$kagawads" />
 
 <x-public.faq />
 

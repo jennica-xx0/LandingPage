@@ -22,7 +22,7 @@
     <div class="container mx-auto">
 
         <!-- Section Heading -->
-        <h2 class="text-4xl sm:text-5xl font-black text-center mb-12 text-gray-800 tracking-wide">
+        <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12 tracking-wide">
             BARANGAY OFFICIALS
         </h2>
 
@@ -41,8 +41,8 @@
         <!-- End Barangay Captain -->
 
         <!-- Kagawad Carousel Section -->
-        <div class="relative w-full max-w-6xl mx-auto">
-            <div id="kagawad-carousel" class="carousel carousel-center w-full p-4 space-x-4 rounded-box">
+        <div class="relative w-full max-w-7xl mx-auto">
+            <div id="kagawad-carousel" class="carousel carousel-center w-full p-4 space-x-10 rounded-box">
                 @foreach($kagawads as $kagawad)
                 <div class="carousel-item">
                     <div class="card bg-base-100 shadow-md w-64">
@@ -124,3 +124,7 @@
     });
 </script>
 <!-- [END BARANGAY OFFICIALS] -->
+
+
+
+

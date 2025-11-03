@@ -1,6 +1,7 @@
 // resources/js/app.js
 import './bootstrap';
 
+/*
 document.addEventListener('DOMContentLoaded', () => {
     const requestButton = document.querySelector('.hero .btn-primary');
     if(requestButton) {
@@ -11,3 +12,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+*/
