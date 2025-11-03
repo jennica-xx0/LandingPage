@@ -7,7 +7,7 @@
         ],
         (object) [
             'date' => '2025-10-17',
-            'date_range' => '17-20', 
+            'date_range' => '17-20',
             'title' => 'GUSTO MO BA MAG TUPAD?',
             'content' => 'Tara na, kabarangay! Isa itong magandang pagkakataon para sa karagdagang hanapbuhay at tulong mula sa pamahalaan.'
         ],
@@ -37,6 +37,10 @@
         <div class="max-w-6xl mx-auto px-5 flex flex-row gap-4 items-center">
             <img src="{{ asset('/img/announcement.png') }}" alt="Announcement Icon" class="h-15 w-15 mr-2">
 
+        <!-- Search Input with Icon -->
+        <div class="max-w-6xl mx-auto px-5 flex flex-row gap-4 items-center">
+            <img src="{{ asset('/img/announcement.png') }}" alt="Announcement Icon" class="h-15 w-15 mr-2">
+
             <div class="form-control w-full">
                 <label class="relative block w-full">
                     <span class="sr-only">Search</span>
@@ -54,11 +58,12 @@
             </div>
         </div>
 
+        <!-- "ALL" Filter Button -->
         <div class="max-w-6xl mx-auto mt-6 px-5">
             <a href="#"
                 class="inline-block border-b-2 border-blue-800 text-blue-800 font-bold text-sm tracking-wider pb-1 px-2 rounded-t-md hover:bg-blue-50 transition-colors">ALL</a>
         </div>
-
+        <!-- Announcements List (Dynamic) -->
         <div class="space-y-6 max-w-6xl mx-auto mt-4">
 
             @forelse($announcements as $announcement)
