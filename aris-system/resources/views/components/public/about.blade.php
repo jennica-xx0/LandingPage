@@ -1,4 +1,5 @@
 <div class="bg-base-100 py-16 px-4 sm:px-8">
+    {{-- FIX: Increased max-width from 5xl to 7xl for more horizontal space --}}
     <div class="container mx-auto max-w-7xl">
 
         <h2 class="text-4xl sm:text-4xl font-bold font-black text-center mb-12 tracking-wide mb-12">ABOUT US</h2>
