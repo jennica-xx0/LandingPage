@@ -28,7 +28,7 @@
     $tickerText = collect($announcements)->pluck('title')->implode(' — ');
 @endphp
 
-<div class="bg-gray-200 text-gray-800 p-2 flex items-center text-sm overflow-hidden">
+<div class=" text-gray-800 p-2 flex items-center text-sm overflow-hidden">
   <span class="font-bold bg-[#134573] text-white py-1 px-3 rounded-md mr-4 flex-shrink-0">
     Latest Announcements:
   </span>

@@ -1,22 +1,3 @@
-@php
-    // Mock data for officials
-    $captain = (object)[
-        'name' => 'Richard B. Bassig',
-        'position' => 'Barangay Captain',
-        'photo' => '/img/kap.jpg'
-    ];
-
-    $kagawads = [
-        (object)['name' => 'Hermino O. Dela Cruz', 'position' => 'Barangay Kagawad', 'photo' => '/img/kagawad1.jpg'],
-        (object)['name' => 'Angelo Cesar S. Barretto', 'position' => 'Barangay Kagawad', 'photo' => '/img/kagawad2.jpg'],
-        (object)['name' => 'Aeron James C. Ingua', 'position' => 'Barangay Kagawad', 'photo' => '/img/kagawad3.jpg'],
-        (object)['name' => 'John Paul A. Bulos', 'position' => 'Barangay Kagawad', 'photo' => '/img/kagawad4.jpg'],
-        (object)['name' => 'Juan C. Dela Cruz 5', 'position' => 'Barangay Kagawad', 'photo' => '/img/kagawad5.jpg'],
-        (object)['name' => 'Juan C. Dela Cruz 6', 'position' => 'Barangay Kagawad', 'photo' => '/img/kagawad6.jpg'],
-        (object)['name' => 'Juan C. Dela Cruz 7', 'position' => 'Barangay Kagawad', 'photo' => '/img/kagawad7.jpg'],
-    ];
-@endphp
-
 <!-- [START BARANGAY OFFICIALS] -->
 <div class="bg-[#D2E3EE] py-16 px-4 sm:px-8">
     <div class="container mx-auto">
@@ -27,40 +8,44 @@
         </h2>
 
         <!-- Barangay Captain -->
+        @if($captain)
         <div class="flex justify-center mb-12">
-            <div class="card bg-base-100 shadow-xl w-full max-w-xs text-center">
-                <figure class="px-10 pt-10">
-                    <img src="{{ asset($captain->photo) }}" alt="{{ $captain->name }}" class="rounded-xl" />
+            <div class="card bg-base-100 shadow-xl w-80 max-w-xs text-center">
+                <figure class="px-8 pt-8">
+                    <img src="{{ $captain->photo_path ? asset('storage/' . $captain->photo_path) : '/img/kap.jpg' }}" alt="{{ $captain->first_name }} {{ $captain->last_name }}" class="rounded-xl" />
                 </figure>
                 <div class="card-body items-center text-center">
-                    <h3 class="card-title font-bold">{{ $captain->name }}</h3>
+                    <h3 class="card-title font-bold">{{ $captain->first_name }} {{ $captain->middle_initial }} {{ $captain->last_name }}</h3>
                     <p class="text-sm font-medium">{{ $captain->position }}</p>
                 </div>
             </div>
         </div>
+        @endif
         <!-- End Barangay Captain -->
 
         <!-- Kagawad Carousel Section -->
-        <div class="relative w-full max-w-7xl mx-auto">
-            <div id="kagawad-carousel" class="carousel carousel-center w-full p-4 space-x-10 rounded-box">
+        @if($kagawads->isNotEmpty())
+        <div class="relative w-full max-w-6xl mx-auto">
+            <div id="kagawad-carousel" class="carousel carousel-center w-full p-4 space-x-4 rounded-box">
                 @foreach($kagawads as $kagawad)
                 <div class="carousel-item">
                     <div class="card bg-base-100 shadow-md w-64">
-                        <figure class="px-6 pt-6">
-                            <img src="{{ asset($kagawad->photo) }}" alt="{{ $kagawad->name }}" class="rounded-xl" />
+                        <figure class="px-10 pt-6">
+                            <img src="{{ $kagawad->photo_path ? asset('storage/' . $kagawad->photo_path) : '/img/kagawad-placeholder.jpg' }}" alt="{{ $kagawad->first_name }} {{ $kagawad->last_name }}" class="rounded-xl h-48 w-full object-cover" />
                         </figure>
                         <div class="card-body items-center text-center p-4">
-                            <h3 class="card-title text-base font-bold">{{ $kagawad->name }}</h3>
-                            <p class="text-xs font-medium">{{ $kagawad->position }}</p>
+                            <h3 class="card-title text-base font-bold">{{ $kagawad->first_name }} {{ $kagawad->middle_initial }} {{ $kagawad->last_name }}</h3>
+                            <p class="text-s space-x-4 font-medium">{{ $kagawad->position }}</p>
                         </div>
                     </div>
                 </div>
                 @endforeach
             </div>
             <!-- Carousel Navigation Buttons -->
-            <button id="prev-btn" class="btn btn-circle btn-ghost absolute top-1/2 -translate-y-1/2 left-0 sm:-left-4">❮</button>
+             <button id="prev-btn" class="btn btn-circle btn-ghost absolute top-1/2 -translate-y-1/2 left-0 sm:-left-4">❮</button>
             <button id="next-btn" class="btn btn-circle btn-ghost absolute top-1/2 -translate-y-1/2 right-0 sm:-right-4">❯</button>
         </div>
+        @endif
     </div>
 </div>
 
@@ -124,7 +109,3 @@
     });
 </script>
 <!-- [END BARANGAY OFFICIALS] -->
-
-
-
-

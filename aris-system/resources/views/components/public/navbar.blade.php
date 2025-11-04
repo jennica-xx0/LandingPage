@@ -14,7 +14,7 @@
             <li><a class="text-slate-50 hover:text-slate-200">Home</a></li>
             <li><a class="text-slate-50 hover:text-slate-200">Services</a></li>
             <li><a class="text-slate-50 hover:text-slate-200">About</a></li>
-            <li><a href="{{ route('login') }}" class="btn btn-primary btn-sm ml-2">Login</a></li>
+            <li><a href="#" class="btn btn-primary btn-sm ml-2">Login</a></li>
         </ul>
     </div>
     <div class="navbar-end lg:hidden">
@@ -28,7 +28,7 @@
                 <li><a class="hover:text-slate-200">Home</a></li>
                 <li><a class="hover:text-slate-200">Services</a></li>
                 <li><a class="hover:text-slate-200">About</a></li>
-                <li><a href="{{ route('login') }}" class="hover:text-slate-200">Login</a></li>
+                <li><a href="#" class="hover:text-slate-200">Login</a></li>
             </ul>
         </div>
     </div>
