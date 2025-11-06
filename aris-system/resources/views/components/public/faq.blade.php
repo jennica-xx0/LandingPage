@@ -1,9 +1,4 @@
-<!doctype html>
-<html lang="en" data-theme="light">
-
-<body class="min-h-screen bg-base-200">
-
-  <button id="faq-toggle"
+<button id="faq-toggle"
     class="fixed z-50 right-[calc(1rem+env(safe-area-inset-right))]
                    bottom-[calc(1rem+env(safe-area-inset-bottom))]
                    size-16 rounded-full grid place-items-center
@@ -15,9 +10,9 @@
       <path d="M7 7h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.6l-3.2 2.4A1 1 0 0 1 5 18.5V9a2 2 0 0 1 2-2z"/>
     </svg>
     <span id="faq-dot" class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-error ring-2 ring-white"></span>
-  </button>
+</button>
 
-  <section id="faq-chat"
+<section id="faq-chat"
     class="fixed w-80 h-[30rem] right-[calc(1rem+env(safe-area-inset-right))]
            bottom-[calc(5.5rem+env(safe-area-inset-bottom))]
            bg-base-100 rounded-2xl shadow-2xl border border-base-300
@@ -57,25 +52,35 @@
       </div>
       <div id="faq-chipwrap" class="mt-3 max-h-24 overflow-y-auto flex flex-wrap gap-2"></div>
     </div>
-  </section>
+</section>
 
-  <style>
+<style>
     #faq-chat.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
     .chat-end .chat-image { margin-right: -6px; align-self: flex-end; }
-  </style>
+</style>
 
-  <script>
-    
+<script>
     const FAQS = [
-      { q: "How do I register for an account?", a: "Go to Login → Register. Fill in your details and upload a valid ID (students may use school ID). Wait for admin approval." },
-      { q: "What documents can I request online?", a: "You can request: \n• Barangay Clearance\n• Barangay Certificate\n• Indigency Clearance\n• Resident Certificate" },
-      { q: "How can I request a document?", a: "After logging in, go to Requests → Choose document type → Complete the form → Submit." },
-      { q: "How will I know if my document is ready?", a: "You will receive an in-site notification and/or email. You can also track status under Profile → Requests." },
-      { q: "What should I bring when claiming my document?", a: "Bring a valid ID and your reference code/tracking number." },
-      { q: "Can I file a complaint online?", a: "Yes. Go to Complaints → File Complaint. Provide details and attachments if available." },
-      { q: "What are the barangay’s working hours?", a: "Monday–Friday, 8:00 AM–5:00 PM (excluding holidays). The online system is accessible 24/7." },
-      { q: "What are the barangay’s curfew hours?", a: "10:00 PM–4:00 AM, unless otherwise announced." }
+      { q: "How do I register for an account?", a: "Go to Login → Register. Fill in your details and upload a valid ID (students may use school ID). Wait for admin approval.", keywords: ["sign up", "new account", "join", "create account"] },
+      { q: "What documents can I request online?", a: "You can request: \n• Barangay Clearance\n• Barangay Certificate\n• Indigency Clearance\n• Resident Certificate", keywords: ["papers", "forms", "get", "available", "types"] },
+      { q: "How can I request a document?", a: "After logging in, go to Requests → Choose document type → Complete the form → Submit.", keywords: ["apply", "get", "obtain", "process", "procedure"] },
+      { q: "How will I know if my document is ready?", a: "You will receive an in-site notification and/or email. You can also track status under Profile → Requests.", keywords: ["status", "track", "check", "notification", "ready", "finished"] },
+      { q: "What should I bring when claiming my document?", a: "Bring a valid ID and your reference code/tracking number.", keywords: ["claim", "pick up", "collect", "requirements", "id", "code"] },
+      { q: "Can I file a complaint online?", a: "Yes. Go to Complaints → File Complaint. Provide details and attachments if available.", keywords: ["report", "issue", "blotter", "concern", "problem"] },
+      { q: "What are the barangay’s working hours?", a: "Monday–Friday, 8:00 AM–5:00 PM (excluding holidays). The online system is accessible 24/7.", keywords: ["office hours", "open", "close", "schedule", "time"] },
+      { q: "What are the barangay’s curfew hours?", a: "10:00 PM–4:00 AM, unless otherwise announced.", keywords: ["time", "allowed outside", "late night", "restrictions"] }
     ];
+
+    const GREETINGS = {
+      "hi": "Hello!",
+      "hello": "Hi there! How can I assist you?",
+      "hey": "Hey! What can I help you with?",
+      "how are you": "I'm a bot, but I'm ready to help with your questions!",
+    };
+    const getGreetingResponse = q => {
+        const s = q.trim().toLowerCase();
+        return GREETINGS[s] || null;
+    };
 
     const $ = s => document.querySelector(s);
     const chat = $('#faq-chat'), body = $('#faq-body'), input = $('#faq-input');
@@ -106,10 +111,25 @@
     };
     const open = () => { chat.classList.add('is-open'); toggle.setAttribute('aria-expanded', 'true'); dot?.classList.add('hidden'); setTimeout(() => input.focus(), 60); };
     const close = () => { chat.classList.remove('is-open'); toggle.setAttribute('aria-expanded', 'false'); };
+    
     const best = q => {
-      const s = q.trim().toLowerCase(); if (!s) return null;
-      return FAQS.find(f => f.q.toLowerCase().includes(s)) || FAQS.find(f => s.includes(f.q.toLowerCase().slice(0,8)));
+      const s = q.trim().toLowerCase();
+      if (!s) return null;
+      const queryWords = s.split(/\s+/); 
+
+      const scoredFaqs = FAQS.map(f => {
+        let score = 0;
+        const searchableText = `${f.q.toLowerCase()} ${f.keywords.join(' ')}`;
+        if (searchableText.includes(s)) score += 10;
+        queryWords.forEach(word => { if (searchableText.includes(word)) score++; });
+        return { ...f, score };
+      })
+      .filter(f => f.score > 0)
+      .sort((a, b) => b.score - a.score); 
+
+      return scoredFaqs.length > 0 ? scoredFaqs[0] : null;
     };
+
     const renderChips = items => {
       chips.innerHTML = '';
       items.forEach(f => {
@@ -125,21 +145,41 @@
     toggle.addEventListener('click', () => chat.classList.contains('is-open') ? close() : open());
     closeB.addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && chat.classList.contains('is-open')) close(); });
+    
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         e.preventDefault();
         const q = input.value.trim(); if (!q) return;
-        bubble(q, 'user'); const hit = best(q);
-        bubble(hit ? hit.a : 'Sorry, I couldn’t find an exact match. Try keywords like “register”, “complaint”, or “document”.', 'bot');
+        bubble(q, 'user');
+
+        const greetingResponse = getGreetingResponse(q);
+        if (greetingResponse) {
+          bubble(greetingResponse, 'bot');
+        } else {
+          const hit = best(q);
+          const response = hit ? hit.a : 'Sorry, I couldn’t find a match. Please try rephrasing or select one of the common questions below.';
+          bubble(response, 'bot');
+        }
+        
         input.value = '';
       }
     });
+    
     let t; input.addEventListener('input', e => {
-      clearTimeout(t); const val = e.target.value.toLowerCase();
-      t = setTimeout(() => renderChips(FAQS.filter(f => f.q.toLowerCase().includes(val))), 150);
+      clearTimeout(t); 
+      const val = e.target.value.toLowerCase().trim();
+      t = setTimeout(() => {
+        if (!val) {
+          renderChips(FAQS);
+          return;
+        }
+        const filtered = FAQS.filter(f => {
+          const searchable = `${f.q.toLowerCase()} ${f.keywords.join(' ')}`;
+          return searchable.includes(val);
+        });
+        renderChips(filtered.length > 0 ? filtered : FAQS);
+      }, 150);
     });
 
     renderChips(FAQS);
-  </script>
-</body>
-</html>
+</script>
