@@ -1,7 +1,7 @@
 <button id="faq-toggle"
   class="fixed z-50 right-[calc(1rem+env(safe-area-inset-right))]
                    bottom-[calc(1rem+env(safe-area-inset-bottom))]
-                   size-16 rounded-full grid place-items-center
+                   size-12 rounded-full grid place-items-center
                    bg-primary text-primary-content shadow-2xl
                    ring-2 ring-white hover:scale-[1.03] active:scale-95 transition"
   aria-controls="faq-chat" aria-expanded="false" aria-label="Open FAQ chat">

@@ -1,13 +1,13 @@
-<div class="bg-[#D2E3EE] py-16 px-7 sm:px-8">
+<div class="bg-[#D2E3EE] py-10 px-4 sm:px-8">
     <div class="container mx-auto">
 
-        <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12 tracking-wide">
+        <h2 class="text-4xl sm:text-4xl font-bold text-center mb-8 tracking-wide">
             BARANGAY OFFICIALS
         </h2>
 
         @if($captain)
-        <div class="flex justify-center mb-12">
-            <div class="card bg-base-100 shadow-xl w-80 max-w-xs text-center">
+        <div class="flex justify-center mb-8">
+            <div class="card bg-base-100 shadow-xl w-70 max-w-xs text-center">
                 <figure class="px-8 pt-8">
                     <img src="{{ $captain->photo_path ? asset('storage/' . $captain->photo_path) : '/img/kap.jpg' }}" alt="{{ $captain->first_name }} {{ $captain->last_name }}" class="rounded-xl" />
                 </figure>
@@ -63,7 +63,6 @@
         const carousel = document.getElementById('kagawad-carousel');
         if (!carousel) return;
 
-        // 1. Existing Button Logic 
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         if (prevBtn && nextBtn) {
@@ -77,7 +76,6 @@
             }));
         }
 
-        // 2. New Draggable Logic 
         let isDown = false;
         let startX;
         let scrollLeft;
