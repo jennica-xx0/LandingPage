@@ -11,9 +11,9 @@
     </div>
     <div class="navbar-end hidden lg:flex">
         <ul class="menu menu-horizontal px-1 font-semibold">
-            <li><a class="text-slate-50 hover:text-slate-200">Home</a></li>
-            <li><a class="text-slate-50 hover:text-slate-200">Services</a></li>
-            <li><a class="text-slate-50 hover:text-slate-200">About</a></li>
+            <li><a href="#hero" class="text-slate-50 hover:text-slate-200">Home</a></li>
+            <li><a href="#services" class="text-slate-50 hover:text-slate-200">Services</a></li>
+            <li><a href="#about" class="text-slate-50 hover:text-slate-200">About</a></li>
             <li><a href="#" class="btn btn-primary btn-sm ml-2">Login</a></li>
         </ul>
     </div>
@@ -25,10 +25,10 @@
                 </svg>
             </label>
             <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-[#2E5E85] text-slate-50 rounded-box w-52">
-                <li><a class="hover:text-slate-200">Home</a></li>
-                <li><a class="hover:text-slate-200">Services</a></li>
-                <li><a class="hover:text-slate-200">About</a></li>
-                <li><a href="#" class="hover:text-slate-200">Login</a></li>
+                <li><a href="#hero">Home</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#">Login</a></li>
             </ul>
         </div>
     </div>

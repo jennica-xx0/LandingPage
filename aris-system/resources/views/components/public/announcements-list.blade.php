@@ -30,34 +30,34 @@
         <div class="space-y-1 max-w-6xl mx-auto mt-4">
 
             @forelse($announcements as $announcement)
-                <a href="{{ route('announcements.show', $announcement) }}" class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
-                    <div class="flex items-start space-x-6">
-                        @php
-                            $displayDate = $announcement->start_date ? \Carbon\Carbon::parse($announcement->start_date) : $announcement->created_at;
-                        @endphp
-                        <div class="text-center flex-shrink-0 w-20">
-                            <p class="text-xl font-bold text-blue-800">{{ $displayDate->format('M') }}</p>
-                            <p class="text-2xl font-bold">{{ $displayDate->format('d') }}</p>
-                        </div>
-                        <div class="border-l-2 border-gray-300 pl-6">
-                            <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">{{ $announcement->title }}</h3>
-                            <div class="flex items-center text-sm text-gray-500 mt-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
-                                    fill="currentColor">
-                                    <path fill-rule="evenodd"
-                                        d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Posted on: {{ $displayDate->format('F d, Y') }}</span>
-                            </div>
-                            <p class="mt-2 text-slate-600">{{ Str::limit($announcement->content, 150) }}</p>
-                        </div>
+            <a href="{{ route('announcements.show', $announcement) }}" class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
+                <div class="flex items-start space-x-6">
+                    @php
+                    $displayDate = $announcement->start_date ? \Carbon\Carbon::parse($announcement->start_date) : $announcement->created_at;
+                    @endphp
+                    <div class="text-center flex-shrink-0 w-20">
+                        <p class="text-xl font-bold text-blue-800">{{ $displayDate->format('M') }}</p>
+                        <p class="text-2xl font-bold">{{ $displayDate->format('d') }}</p>
                     </div>
-                </a>
-            @empty
-                <div class="text-center py-10 text-gray-500">
-                    <p>No active announcements found.</p>
+                    <div class="border-l-2 border-gray-300 pl-6">
+                        <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">{{ $announcement->title }}</h3>
+                        <div class="flex items-center text-sm text-gray-500 mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Posted on: {{ $displayDate->format('F d, Y') }}</span>
+                        </div>
+                        <p class="mt-2 text-slate-600">{{ Str::limit($announcement->content, 150) }}</p>
+                    </div>
                 </div>
+            </a>
+            @empty
+            <div class="text-center py-10 text-gray-500">
+                <p>No active announcements found.</p>
+            </div>
             @endforelse
 
             <p class="text-center pt-8 max-w-4xl mx-auto">

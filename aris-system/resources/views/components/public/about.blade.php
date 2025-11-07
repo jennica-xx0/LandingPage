@@ -1,10 +1,8 @@
-<div class="bg-base-100 py-16 px-4 sm:px-8">
-    {{-- FIX: Increased max-width from 5xl to 7xl for more horizontal space --}}
+<div id="about" class="bg-base-100 py-16 px-4 sm:px-8">
     <div class="container mx-auto max-w-7xl">
 
         <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12">ABOUT US</h2>
 
-        {{-- FIX: Added text-sm and leading-relaxed to reduce font size and improve line spacing --}}
         <div class="prose max-w-none font-serif text-justify mb-12">
             <p class="text-l leading-relaxed">
                 Barangay Daang Bakal was named after the Rail Road of the Philippine National Railway (PNR) based on the ancient people. It is one of the Barangays included in District 1 by Local Political Division.

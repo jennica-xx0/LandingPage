@@ -1,4 +1,4 @@
-<div class="bg-[#E7F0F6] py-16 px-4 sm:px-8">
+<div id="services" class="bg-[#E7F0F6] py-16 px-4 sm:px-8">
     <div class="container mx-auto">
 
         <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12 tracking-wide">
