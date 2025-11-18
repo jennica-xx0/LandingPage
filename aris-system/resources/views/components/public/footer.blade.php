@@ -2,6 +2,7 @@
   <div class="max-w-7xl mx-auto px-0 py-0">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-15 items-center">
 
+
       {{-- OUR LOCATION --}}
       <section class="lg:col-span-3">
         <h6 class="text-sm font-bold uppercase tracking-wider text-white/90 mt-2 mb-2">Our Location</h6>
@@ -16,6 +17,7 @@
             style="max-height: 180px;" />
         </a>
       </section>
+
 
       {{-- CONTACT & VISIT INFO --}}
       <section class="lg:col-span-2 space-y-2">
@@ -37,6 +39,7 @@
           </ul>
         </nav>
 
+
         <nav>
           <h6 class="text-sm font-bold uppercase tracking-wider text-white/90 mb-4 mt-4">Visit Us</h6>
           <ul class="space-y-3 text-sm text-white/80">
@@ -52,8 +55,10 @@
         </nav>
       </section>
 
+
     </div>
   </div>
+
 
   <div class="footer footer-center p-4 border-t border-white/10">
     <aside>

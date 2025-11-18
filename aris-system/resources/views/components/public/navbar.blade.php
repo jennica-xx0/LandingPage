@@ -14,7 +14,7 @@
             <li><a href="#hero" class="text-slate-50 hover:text-slate-200">Home</a></li>
             <li><a href="#services" class="text-slate-50 hover:text-slate-200">Services</a></li>
             <li><a href="#about" class="text-slate-50 hover:text-slate-200">About</a></li>
-            <li><a href="#" class="btn btn-primary btn-sm ml-2">Login</a></li>
+            <li><a href="#" class="text-slate-50 hover:text-slate-200 btn-sm ml-2">Login</a></li>
         </ul>
     </div>
     <div class="navbar-end lg:hidden">

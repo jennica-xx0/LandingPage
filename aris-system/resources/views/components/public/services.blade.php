@@ -1,11 +1,14 @@
-<div id="services" class="bg-[#E7F0F6] py-16 px-4 sm:px-8">
+<div id="services" class="bg-[#A2C4D9]/50 py-16 px-4 sm:px-8">
     <div class="container mx-auto">
+
 
         <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12 tracking-wide">
             BARANGAY SERVICES
         </h2>
 
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+
 
             <div class="card shadow-lg rounded-lg p-6 flex flex-col items-center text-center" style="background-color: #de9f98;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Barangay Clearance</h3>
@@ -17,6 +20,7 @@
                 </p>
             </div>
 
+
             <div class="card shadow-lg rounded-lg text-slate-800 p-6 flex flex-col items-center text-center" style="background-color: #8f94ac;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Barangay Certificate</h3>
                 <figure class="mb-4 h-40 w-full">
@@ -26,6 +30,7 @@
                     A Barangay Certificate is an official document issued for various purposes, such as proof of identity, residency, or other personal declarations. It serves as formal confirmation of information verified by the barangay.
                 </p>
             </div>
+
 
             <div class="card shadow-lg rounded-lg text-slate-800 p-6 flex flex-col items-center text-center" style="background-color: #ba9f76;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Indigency Clearance</h3>
@@ -37,6 +42,7 @@
                 </p>
             </div>
 
+
             <div class="card shadow-lg rounded-lg text-slate-800 p-6 flex flex-col items-center text-center" style="background-color: #80512c;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Resident Certificate</h3>
                 <figure class="mb-4 h-40 w-full">
@@ -47,7 +53,11 @@
                 </p>
             </div>
 
+
         </div>
+
 
     </div>
 </div>
+
+

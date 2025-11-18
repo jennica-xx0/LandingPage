@@ -1,253 +1,234 @@
-<button id="faq-toggle"
-  class="fixed z-50 right-[calc(1rem+env(safe-area-inset-right))]
-                   bottom-[calc(1rem+env(safe-area-inset-bottom))]
-                   size-12 rounded-full grid place-items-center
-                   bg-primary text-primary-content shadow-2xl
-                   ring-2 ring-white hover:scale-[1.03] active:scale-95 transition"
-  aria-controls="faq-chat" aria-expanded="false" aria-label="Open FAQ chat">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-    class="w-7 h-7" fill="currentColor">
+{{-- Final FAQ Chatbot Component --}}
+
+
+<button id="faq-toggle" class="fixed z-50 right-4 bottom-4 size-12 rounded-full grid place-items-center
+          bg-[#232c54] text-white shadow-2xl
+         ring-2 ring-white hover:scale-105 active:scale-95 transition-transform" aria-controls="faq-chat"
+  aria-expanded="false" aria-label="Open FAQ chat">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-7 h-7" fill="currentColor">
     <path d="M7 7h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.6l-3.2 2.4A1 1 0 0 1 5 18.5V9a2 2 0 0 1 2-2z" />
   </svg>
   <span id="faq-dot" class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-error ring-2 ring-white"></span>
 </button>
 
-<section id="faq-chat"
-  class="fixed w-80 h-[30rem] right-[calc(1rem+env(safe-area-inset-right))]
-           bottom-[calc(5.5rem+env(safe-area-inset-bottom))]
-           bg-base-100 rounded-2xl shadow-2xl border border-base-300
-           flex flex-col translate-y-4 opacity-0 pointer-events-none
-           transition-all duration-300 ease-out"
-  role="dialog" aria-modal="true" aria-labelledby="faq-title">
-  <header class="px-4 py-3 rounded-t-2xl bg-primary text-primary-content flex items-center justify-between">
+
+<section id="faq-chat" class="fixed w-80 h-[30rem] right-4 bottom-20
+         bg-base-100 rounded-2xl shadow-2xl border border-base-300
+         flex flex-col opacity-0 pointer-events-none
+         transition-all duration-300 ease-out" role="dialog" aria-modal="true" aria-labelledby="faq-title">
+
+
+  {{-- UPDATED HEADER --}}
+  <header class="px-4 py-3 rounded-t-2xl bg-[#134573CC] text-white flex items-center justify-between">
     <div class="flex items-center gap-2">
       <span class="inline-block w-2.5 h-2.5 bg-success rounded-full"></span>
       <h3 id="faq-title" class="font-semibold">Frequently Asked Questions</h3>
     </div>
-    <button id="faq-close" class="btn btn-ghost btn-sm btn-circle text-primary-content" aria-label="Close">✕</button>
+    <button id="faq-close" class="btn btn-ghost btn-sm btn-circle text-white" aria-label="Close">✕</button>
   </header>
+
 
   <div id="faq-body" class="flex-1 overflow-y-auto p-4 space-y-3">
     <div class="chat chat-start">
       <div class="chat-image avatar">
-        <div class="w-8 rounded-full">
-          <img src="https://api.dicebear.com/8.x/thumbs/svg?seed=Bot" alt="Assistant">
-        </div>
+        <div class="w-8 rounded-full"><img src="https://api.dicebear.com/8.x/thumbs/svg?seed=Bot" alt="Assistant"></div>
       </div>
-      <div class="chat-bubble bg-base-200 text-base-content">
-        Hello! How can I help you today? Select a question below or type your own.
+      <div class="chat-bubble bg-base-200 text-base-content">Hello! Type a question or select one of the topics below.
       </div>
     </div>
   </div>
 
-  <div class="border-t border-base-300 p-3">
+
+  <div class="border-t border-base-300 p-3 space-y-3">
     <div class="form-control">
-      <label class="input input-bordered flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M21 21l-4.35-4.35M16.65 10.5a6.15 6.15 0 11-12.3 0 6.15 6.15 0 0112.3 0z" />
-        </svg>
-        <input id="faq-input" type="text" placeholder="Type a question… (Enter to send)" class="grow" autocomplete="off">
-      </label>
+      <input id="faq-input" type="text" placeholder="Type to filter questions..."
+        class="input input-sm input-bordered w-full" autocomplete="off" />
     </div>
-    <div id="faq-chipwrap" class="mt-3 max-h-24 overflow-y-auto flex flex-wrap gap-2"></div>
+    <div id="faq-chipwrap" class="max-h-24 overflow-y-auto flex flex-wrap gap-2"></div>
   </div>
 </section>
 
+
 <style>
+  #faq-chat {
+    transform: translateY(1rem);
+  }
+
+
   #faq-chat.is-open {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
   }
-
-  .chat-end .chat-image {
-    margin-right: -6px;
-    align-self: flex-end;
-  }
 </style>
 
+
 <script>
-  const FAQS = [{
-      q: "How do I register for an account?",
-      a: "Go to Login → Register. Fill in your details and upload a valid ID (students may use school ID). Wait for admin approval.",
-      keywords: ["sign up", "new account", "join", "create account"]
-    },
-    {
-      q: "What documents can I request online?",
-      a: "You can request: \n• Barangay Clearance\n• Barangay Certificate\n• Indigency Clearance\n• Resident Certificate",
-      keywords: ["papers", "forms", "get", "available", "types"]
-    },
-    {
-      q: "How can I request a document?",
-      a: "After logging in, go to Requests → Choose document type → Complete the form → Submit.",
-      keywords: ["apply", "get", "obtain", "process", "procedure"]
-    },
-    {
-      q: "How will I know if my document is ready?",
-      a: "You will receive an in-site notification and/or email. You can also track status under Profile → Requests.",
-      keywords: ["status", "track", "check", "notification", "ready", "finished"]
-    },
-    {
-      q: "What should I bring when claiming my document?",
-      a: "Bring a valid ID and your reference code/tracking number.",
-      keywords: ["claim", "pick up", "collect", "requirements", "id", "code"]
-    },
-    {
-      q: "Can I file a complaint online?",
-      a: "Yes. Go to Complaints → File Complaint. Provide details and attachments if available.",
-      keywords: ["report", "issue", "blotter", "concern", "problem"]
-    },
-    {
-      q: "What are the barangay’s working hours?",
-      a: "Monday–Friday, 8:00 AM–5:00 PM (excluding holidays). The online system is accessible 24/7.",
-      keywords: ["office hours", "open", "close", "schedule", "time"]
-    },
-    {
-      q: "What are the barangay’s curfew hours?",
-      a: "10:00 PM–4:00 AM, unless otherwise announced.",
-      keywords: ["time", "allowed outside", "late night", "restrictions"]
-    }
-  ];
+  document.addEventListener('DOMContentLoaded', function () {
+    // --- 1. DEFINE YOUR QUESTIONS AND ANSWERS ---
+    const FAQS = [
+      {
+        q: "How do I register?",
+        a: "Visit the official Barangay Information System link: https://Baris.com. Residents can register online by filling out the registration form. If you experience any difficulty using the system, you may visit the barangay office, where the staff will assist you with the registration process and just bring valid id for verification.",
+        keywords: ["account", "sign up", "join", "new user"]
+      },
+      {
+        q: "What types of documents can I request online?",
+        a: "You can request: Barangay Clearance, Barangay Certificate, Indigency Clearance, and Resident Certificate.",
+        keywords: ["papers", "forms", "available", "list"]
+      },
+      {
+        q: "How can I request a document?",
+        a: "Once registered, log in to your account and go to the Homepage. Click the Request Document button, choose the type of document you need, fill out the required details, and submit your request for processing.",
+        keywords: ["apply", "get", "obtain", "process"]
+      },
+      {
+        q: "How will I know if my requested document is ready for pickup?",
+        a: "After submitting your request, the processing time is typically within 24 hours. You will receive a notification or email once your document is ready for pickup at the barangay office.",
+        keywords: ["status", "track", "check", "notification", "ready"]
+      },
+      {
+        q: "What should I bring when claiming my document?",
+        a: "Please bring a valid ID or provide your reference code number as proof of tracking number when claiming your document.",
+        keywords: ["claim", "collect", "requirements", "id"]
+      },
+      {
+        q: "Can I file a complaint online?",
+        a: "Yes. Log in to your account, navigate to the Homepage, and click the Submit Complaint button. You can then write and submit your complaint directly through the system.",
+        keywords: ["report", "issue", "blotter", "concern"]
+      },
+      {
+        q: "What are the barangay’s working hours?",
+        a: "The barangay office is open from Monday to Friday, 8:00 AM to 5:00 PM, excluding holidays. For online transactions, the system is accessible 24/7 for residents’ convenience.",
+        keywords: ["office hours", "schedule", "open", "close", "time"] // <-- KEYWORD ADDED
+      },
+      {
+        q: "What are the barangay’s curfew hours?",
+        a: "The official curfew hours are from 10:00 PM to 4:00 AM, unless otherwise adjusted by barangay announcements or local ordinances. Residents are encouraged to stay indoors during these hours for safety and community order.",
+        keywords: ["late", "night", "restrictions", "time"] // <-- KEYWORD ADDED
+      }
+    ];
 
-  const GREETINGS = {
-    "hi": "Hello!",
-    "hello": "Hi there! How can I assist you?",
-    "hey": "Hey! What can I help you with?",
-    "how are you": "I'm a bot, but I'm ready to help with your questions!",
-  };
-  const getGreetingResponse = q => {
-    const s = q.trim().toLowerCase();
-    return GREETINGS[s] || null;
-  };
 
-  const $ = s => document.querySelector(s);
-  const chat = $('#faq-chat'),
-    body = $('#faq-body'),
-    input = $('#faq-input');
-  const chips = $('#faq-chipwrap'),
-    toggle = $('#faq-toggle'),
-    closeB = $('#faq-close'),
-    dot = $('#faq-dot');
+    // --- 2. GET THE HTML ELEMENTS ---
+    const faqToggleBtn = document.getElementById('faq-toggle');
+    const faqCloseBtn = document.getElementById('faq-close');
+    const faqChatWindow = document.getElementById('faq-chat');
+    const faqBody = document.getElementById('faq-body');
+    const faqChipsContainer = document.getElementById('faq-chipwrap');
+    const faqInput = document.getElementById('faq-input');
+    const faqNotificationDot = document.getElementById('faq-dot');
 
-  const nl2br = s => (s || '').replace(/\n/g, '<br>');
-  const scrollBottom = () => (body.scrollTop = body.scrollHeight);
-  const bubble = (msg, who = 'bot') => {
-    const wrap = document.createElement('div');
-    wrap.className = `chat ${who === 'user' ? 'chat-end' : 'chat-start'}`;
 
-    const imgWrap = document.createElement('div');
-    imgWrap.className = 'chat-image avatar';
-    const box = document.createElement('div');
-    box.className = 'w-8 rounded-full';
-    const img = document.createElement('img');
-    img.alt = who === 'user' ? 'You' : 'Assistant';
-    img.src = who === 'user' ? 'https://api.dicebear.com/8.x/thumbs/svg?seed=You' : 'https://api.dicebear.com/8.x/thumbs/svg?seed=Bot';
-    box.appendChild(img);
-    imgWrap.appendChild(box);
-    wrap.appendChild(imgWrap);
+    // --- 3. HELPER FUNCTIONS ---
 
-    const b = document.createElement('div');
-    b.className = who === 'user' ?
-      'chat-bubble chat-bubble-primary text-primary-content max-w-[85%]' :
-      'chat-bubble bg-base-200 text-base-content max-w-[85%]';
-    b.innerHTML = nl2br(msg);
-    wrap.appendChild(b);
 
-    body.appendChild(wrap);
-    scrollBottom();
-  };
-  const open = () => {
-    chat.classList.add('is-open');
-    toggle.setAttribute('aria-expanded', 'true');
-    dot?.classList.add('hidden');
-    setTimeout(() => input.focus(), 60);
-  };
-  const close = () => {
-    chat.classList.remove('is-open');
-    toggle.setAttribute('aria-expanded', 'false');
-  };
-
-  const best = q => {
-    const s = q.trim().toLowerCase();
-    if (!s) return null;
-    const queryWords = s.split(/\s+/);
-
-    const scoredFaqs = FAQS.map(f => {
-        let score = 0;
-        const searchableText = `${f.q.toLowerCase()} ${f.keywords.join(' ')}`;
-        if (searchableText.includes(s)) score += 10;
-        queryWords.forEach(word => {
-          if (searchableText.includes(word)) score++;
-        });
-        return {
-          ...f,
-          score
-        };
-      })
-      .filter(f => f.score > 0)
-      .sort((a, b) => b.score - a.score);
-
-    return scoredFaqs.length > 0 ? scoredFaqs[0] : null;
-  };
-
-  const renderChips = items => {
-    chips.innerHTML = '';
-    items.forEach(f => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'btn btn-xs md:btn-sm btn-outline normal-case';
-      btn.textContent = f.q;
-      btn.addEventListener('click', () => {
-        bubble(f.q, 'user');
-        bubble(f.a, 'bot');
+    function renderChips(filterText = '') {
+      faqChipsContainer.innerHTML = '';
+      const lowerCaseFilter = filterText.toLowerCase();
+      FAQS.forEach(faq => {
+        if (faq.q.toLowerCase().includes(lowerCaseFilter)) {
+          const chip = document.createElement('button');
+          chip.className = 'btn btn-xs md:btn-sm btn-outline normal-case';
+          chip.textContent = faq.q;
+          chip.addEventListener('click', () => {
+            addBubble(faq.q, 'user');
+            addBubble(faq.a, 'bot');
+          });
+          faqChipsContainer.appendChild(chip);
+        }
       });
-      chips.appendChild(btn);
-    });
-  };
+    }
 
-  toggle.addEventListener('click', () => chat.classList.contains('is-open') ? close() : open());
-  closeB.addEventListener('click', close);
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && chat.classList.contains('is-open')) close();
-  });
 
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const q = input.value.trim();
-      if (!q) return;
-      bubble(q, 'user');
-
-      const greetingResponse = getGreetingResponse(q);
-      if (greetingResponse) {
-        bubble(greetingResponse, 'bot');
+    function toggleChat(show) {
+      if (show) {
+        faqChatWindow.classList.add('is-open');
+        faqNotificationDot.style.display = 'none';
       } else {
-        const hit = best(q);
-        const response = hit ? hit.a : 'Sorry, I couldn’t find a match. Please try rephrasing or select one of the common questions below.';
-        bubble(response, 'bot');
+        faqChatWindow.classList.remove('is-open');
       }
-
-      input.value = '';
     }
-  });
 
-  let t;
-  input.addEventListener('input', e => {
-    clearTimeout(t);
-    const val = e.target.value.toLowerCase().trim();
-    t = setTimeout(() => {
-      if (!val) {
-        renderChips(FAQS);
-        return;
+
+    function addBubble(message, sender) {
+      const chatClass = (sender === 'user') ? 'chat-end' : 'chat-start';
+      const bubbleClass = (sender === 'user') ? 'bg-[#E7F0F6]' : 'bg-base-300';
+      const messageHTML = `<div class="chat ${chatClass}"><div class="chat-bubble ${bubbleClass}">${message.replace(/\n/g, '<br>')}</div></div>`;
+      faqBody.insertAdjacentHTML('beforeend', messageHTML);
+      faqBody.scrollTop = faqBody.scrollHeight;
+    }
+
+
+    function findBestMatch(userInput) {
+      const lowerCaseInput = userInput.toLowerCase().trim();
+      if (!lowerCaseInput) return null;
+
+
+      // Create a list of all words the user typed
+      const searchWords = lowerCaseInput.split(/\s+/);
+
+
+      const scoredFaqs = FAQS.map(faq => {
+        // Combine the question and its keywords into one searchable string
+        const searchableText = `${faq.q.toLowerCase()} ${faq.keywords.join(' ')}`;
+
+
+        let score = 0;
+        // Check if any of the user's typed words appear in our searchable text
+        searchWords.forEach(word => {
+          if (searchableText.includes(word)) {
+            score++;
+          }
+        });
+
+
+        return { ...faq, score }; // Return the faq with its score
+      })
+        .filter(faq => faq.score > 0) // Keep only FAQs that got a score > 0
+        .sort((a, b) => b.score - a.score); // Sort by the highest score first
+
+
+      // Return the best match (the one with the highest score), or null if no matches
+      return scoredFaqs.length > 0 ? scoredFaqs[0] : null;
+    }
+
+
+    // --- 4. SETUP AND EVENT LISTENERS ---
+
+
+    renderChips();
+
+
+    faqInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        const userInput = faqInput.value;
+        if (!userInput.trim()) return;
+
+
+        addBubble(userInput, 'user');
+        const match = findBestMatch(userInput);
+
+
+        if (match) {
+          addBubble(match.a, 'bot');
+        } else {
+          addBubble("Sorry, I can't answer that question. For further details, please visit the barangay hall or contact us directly.", 'bot');
+        }
+
+
+        faqInput.value = '';
+        renderChips();
       }
-      const filtered = FAQS.filter(f => {
-        const searchable = `${f.q.toLowerCase()} ${f.keywords.join(' ')}`;
-        return searchable.includes(val);
-      });
-      renderChips(filtered.length > 0 ? filtered : FAQS);
-    }, 150);
-  });
+    });
 
-  renderChips(FAQS);
+
+    faqInput.addEventListener('input', () => {
+      renderChips(faqInput.value);
+    });
+
+
+    faqToggleBtn.addEventListener('click', () => toggleChat(true));
+    faqCloseBtn.addEventListener('click', () => toggleChat(false));
+  });
 </script>

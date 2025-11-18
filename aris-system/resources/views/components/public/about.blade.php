@@ -1,7 +1,9 @@
 <div id="about" class="bg-base-100 py-16 px-4 sm:px-8">
     <div class="container mx-auto max-w-7xl">
 
+
         <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12">ABOUT US</h2>
+
 
         <div class="prose max-w-none font-serif text-justify mb-12">
             <p class="text-l leading-relaxed">
@@ -9,6 +11,7 @@
             </p>
             <p class="text-l leading-relaxed"> <br>
                 The Official Logo of the Barangay has the following features: the PNR Rail Road where the name Daang Bakal came, it was the path from Manila to Bicol Provinces and vice versa. The Bravo 9 is used because Daang Bakal is the 9th Barangay in the City of Mandaluyong when alphabetically arranged.
+
 
             </p>
             <p class="text-l leading-relaxed"><br>
@@ -21,6 +24,7 @@
                 Barangay Daang Bakal Hall is located at 553-J. Vicente Fabella Street; it is at the back of Jose Rizal University Elementary Building. Though we started small, our beginning was like a toll gate beside Sevilla Bridge in Shaw Boulevard but with the grace of God we are now occupying 1, 168.5sq.mts. with 255 sq.mts. roof Deck Area and 646 sq. mts. open space. It was turnover by City Mayor Menchie Abalos and former Benhur Abalos on July 18, 2018.
             </p>
         </div>
+
 
         <div class="grid grid-cols-1 text-center md:grid-cols-2 gap-10 mb-16">
             <div>
@@ -37,6 +41,7 @@
             </div>
         </div>
 
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="rounded-lg shadow-lg h-[450px] flex items-center justify-center overflow-hidden">
                 <img src="/img/kap1.jpg" alt="Award Poster 1" class="max-w-full max-h-full object-contain">
@@ -46,8 +51,10 @@
             </div>
         </div>
 
+
     </div>
 </div>
+
 
 <style>
     .font-serif {

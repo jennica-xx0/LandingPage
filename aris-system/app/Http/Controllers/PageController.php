@@ -21,7 +21,7 @@ class PageController extends Controller
                 $query->where('end_date', '>=', $now)
                     ->orWhereNull('end_date');
             })
-            ->orderBy(DB::raw('ISNULL(start_date)'), 'asc')
+            ->orderByRaw("CASE WHEN start_date IS NULL THEN 1 ELSE 0 END ASC") // Sorts NULLs last (equivalent to 'IS NULL' ASC)
             ->orderBy('start_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->take(5)

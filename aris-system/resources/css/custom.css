@@ -1,0 +1,7 @@
+/* resources/css/custom.css */
+
+/* Just the bare minimum base styles to test compilation */
+html {
+    scroll-behavior: smooth;
+}
+/* Remove all custom variables and all @source directives for this test */

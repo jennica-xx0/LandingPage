@@ -157,87 +157,91 @@ class AdminController extends Controller
     {
         return view('admin.dashboard');
     }
-
-    // USER METHODS
-    public function usersIndex()
-    {
-        $users = User::orderBy('name')->paginate(10);
-        return view('admin.users.index', compact('users'));
-    }
-
-    public function usersCreate()
-    {
-        return view('admin.users.create');
-    }
-
-    public function usersStore(Request $request)
-    {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        return redirect()->route('admin.users.index');
-    }
-
-    public function usersShow(User $user)
-    {
-        $profileData = (object) [
-            'full_name' => $user->name,
-            'user_id_code' => 'SADM-K8209', // Placeholder
-            'photo_path' => null,
-            'last_name' => explode(' ', $user->name)[1] ?? '',
-            'first_name' => explode(' ', $user->name)[0] ?? '',
-            'middle_name' => '', // Placeholder
-            'suffix' => '', // Placeholder
-            'age' => 'N/A', // Placeholder
-            'date_of_birth' => 'N/A', // Placeholder
-            'place_of_birth' => 'N/A', // Placeholder
-            'gender' => 'N/A', // Placeholder
-            'civil_status' => 'N/A', // Placeholder
-            'citizenship' => 'N/A', // Placeholder
-            'contact_number' => 'N/A', // Placeholder
-            'email' => $user->email,
-            'house_street' => 'N/A', // Placeholder
-            'barangay' => 'Brgy. Daang Bakal', // Placeholder
-            'city_municipality' => 'Mandaluyong City', // Placeholder
-        ];
-        return view('admin.users.show', compact('profileData'));
-    }
-
-    // ANNOUNCEMENT METHODS
-    public function announcementsIndex()
+    public function announcementsIndex(Request $request)
     {
         $now = Carbon::now();
-        $announcements = Announcement::orderBy('start_date', 'desc')->paginate(10);
+        $query = Announcement::query();
+        $status = $request->query('status');
+
+        if ($status === 'ended') {
+            $query->where('end_date', '<', $now);
+        } elseif ($status === 'scheduled') {
+            $query->where('start_date', '>', $now);
+        } elseif ($status === 'ongoing') {
+            $query->where(function ($q) use ($now) {
+                $q->where('start_date', '<=', $now)->orWhereNull('start_date');
+            })->where(function ($q) use ($now) {
+                $q->where('end_date', '>=', $now)->orWhereNull('end_date');
+            });
+        }
+
+        $announcements = $query->orderBy('created_at', 'desc')->simplePaginate(3)->withQueryString();
+
         $total_announcements = Announcement::count();
         $ended_announcements = Announcement::where('end_date', '<', $now)->count();
-        $ongoing_announcements = Announcement::where(function($query) use ($now) { $query->where('start_date', '<=', $now)->orWhereNull('start_date'); })->where(function($query) use ($now) { $query->where('end_date', '>=', $now)->orWhereNull('end_date'); })->count();
-        return view('admin.announcements.index', compact('announcements', 'total_announcements', 'ended_announcements', 'ongoing_announcements'));
-    }
-    
-    public function announcementsStore(Request $request){ $validatedData = $request->validate(['title' => 'required|string|max:255', 'content' => 'required|string', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date']); Announcement::create($validatedData); return redirect()->route('admin.announcements.index'); }
-    
-    public function announcementsUpdate(Request $request, Announcement $announcement){ $validatedData = $request->validate(['title' => 'required|string|max:255', 'content' => 'required|string', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date']); $announcement->update($validatedData); return redirect()->route('admin.announcements.index'); }
-    
-    public function announcementsDestroy(Announcement $announcement){ $announcement->delete(); return redirect()->route('admin.announcements.index'); }
+        $ongoing_announcements = Announcement::where(function ($q) use ($now) {
+            $q->where('start_date', '<=', $now)->orWhereNull('start_date');
+        })->where(function ($q) use ($now) {
+            $q->where('end_date', '>=', $now)->orWhereNull('end_date');
+        })->count();
 
-    // OFFICIAL METHODS
-    public function officialsIndex() { $officials = Official::orderBy('display_order', 'asc')->get(); return view('admin.officials.index', compact('officials')); }
-    
-    public function officialsStore(Request $request) { $validatedData = $request->validate(['first_name' => 'required|string|max:255', 'last_name' => 'required|string|max:255', 'middle_initial' => 'nullable|string|max:5', 'position' => 'required|string|max:255', 'display_order' => 'required|integer|min:0', 'photo_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048']); if ($request->hasFile('photo_path')) { $path = $request->file('photo_path')->store('officials', 'public'); $validatedData['photo_path'] = $path; } Official::create($validatedData); return redirect()->route('admin.officials.index'); }
-    
-    public function officialsUpdate(Request $request, Official $official) { $validatedData = $request->validate(['first_name' => 'required|string|max:255', 'last_name' => 'required|string|max:255', 'middle_initial' => 'nullable|string|max:5', 'position' => 'required|string|max:255', 'display_order' => 'required|integer|min:0', 'photo_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048']); if ($request->hasFile('photo_path')) { if ($official->photo_path) { Storage::disk('public')->delete($official->photo_path); } $path = $request->file('photo_path')->store('officials', 'public'); $validatedData['photo_path'] = $path; } $official->update($validatedData); return redirect()->route('admin.officials.index'); }
-    
-    public function officialsDestroy(Official $official) { if ($official->photo_path) { Storage::disk('public')->delete($official->photo_path); } $official->delete(); return redirect()->route('admin.officials.index'); }
+        return view('admin.announcements.index', compact('announcements', 'total_announcements', 'ended_announcements', 'ongoing_announcements', 'status'));
+    }
+    public function announcementsStore(Request $request)
+    {
+        $validatedData = $request->validate(['title' => 'required|string|max:255', 'content' => 'required|string', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date']);
+        Announcement::create($validatedData);
+        return redirect()->route('admin.announcements.index');
+    }
+    public function announcementsUpdate(Request $request, Announcement $announcement)
+    {
+        $validatedData = $request->validate(['title' => 'required|string|max:255', 'content' => 'required|string', 'start_date' => 'nullable|date', 'end_date' => 'nullable|date|after_or_equal:start_date']);
+        $announcement->update($validatedData);
+        return redirect()->route('admin.announcements.index');
+    }
+    public function announcementsDestroy(Announcement $announcement)
+    {
+        $announcement->delete();
+        return redirect()->route('admin.announcements.index');
+    }
+    public function officialsIndex()
+    {
+        $officials = Official::orderBy('display_order', 'asc')->get();
+        return view('admin.officials.index', compact('officials'));
+    }
+    public function officialsStore(Request $request)
+    {
+        $validatedData = $request->validate(['first_name' => 'required|string|max:255', 'last_name' => 'required|string|max:255', 'middle_initial' => 'nullable|string|max:5', 'position' => 'required|string|max:255', 'display_order' => 'required|integer|min:0', 'photo_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048']);
+        if ($request->hasFile('photo_path')) {
+            $path = $request->file('photo_path')->store('officials', 'public');
+            $validatedData['photo_path'] = $path;
+        }
+        Official::create($validatedData);
+        return redirect()->route('admin.officials.index');
+    }
+    public function officialsUpdate(Request $request, Official $official)
+    {
+        $validatedData = $request->validate(['first_name' => 'required|string|max:255', 'last_name' => 'required|string|max:255', 'middle_initial' => 'nullable|string|max:5', 'position' => 'required|string|max:255', 'display_order' => 'required|integer|min:0', 'photo_path' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048']);
+        if ($request->hasFile('photo_path')) {
+            if ($official->photo_path) {
+                Storage::disk('public')->delete($official->photo_path);
+            }
+            $path = $request->file('photo_path')->store('officials', 'public');
+            $validatedData['photo_path'] = $path;
+        }
+        $official->update($validatedData);
+        return redirect()->route('admin.officials.index');
+    }
+    public function officialsDestroy(Official $official)
+    {
+        if ($official->photo_path) {
+            Storage::disk('public')->delete($official->photo_path);
+        }
+        $official->delete();
+        return redirect()->route('admin.officials.index');
+    }
 }
+
 ======================================================================
 File: app/Http/Controllers/Controller.php
 ======================================================================
@@ -284,40 +288,30 @@ use Illuminate\Support\Facades\DB;
 
 class PageController extends Controller
 {
-    /**
-     * Display the application's home page.
-     *
-     * @return \Illuminate\View\View
-     */
     public function home()
     {
         $now = now();
 
         $announcements = Announcement::where(function ($query) use ($now) {
-                $query->where('start_date', '<=', $now)
-                      ->orWhereNull('start_date');
-            })
+            $query->where('start_date', '<=', $now)
+                ->orWhereNull('start_date');
+        })
             ->where(function ($query) use ($now) {
                 $query->where('end_date', '>=', $now)
-                      ->orWhereNull('end_date');
+                    ->orWhereNull('end_date');
             })
-            ->orderBy(DB::raw('ISNULL(start_date)'), 'asc')
+            ->orderByRaw("CASE WHEN start_date IS NULL THEN 1 ELSE 0 END ASC") // Sorts NULLs last (equivalent to 'IS NULL' ASC)
             ->orderBy('start_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
-        
+
         $captain = Official::where('position', 'Barangay Captain')->first();
         $kagawads = Official::where('position', '!=', 'Barangay Captain')->orderBy('display_order', 'asc')->get();
-            
+
         return view('home', compact('announcements', 'captain', 'kagawads'));
     }
 
-    /**
-     * Display a single announcement.
-     *
-     * @return \Illuminate\View\View
-     */
     public function showAnnouncement(Announcement $announcement)
     {
         return view('announcements.show', compact('announcement'));
@@ -898,14 +892,14 @@ return [
 
         'sqlite' => [
             'driver' => 'sqlite',
-            'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'url' => env('DATABASE_URL'),
+            'database' => database_path('database.sqlite'),
             'prefix' => '',
-            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            'strict' => false,
+            // Safe minimal options block for SQLite
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => true,
+            ],
         ],
 
         'mysql' => [
@@ -1013,7 +1007,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')) . '-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 
@@ -1046,7 +1040,6 @@ return [
     ],
 
 ];
-
 ======================================================================
 File: config/filesystems.php
 ======================================================================
@@ -1799,9 +1792,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -1829,10 +1819,7 @@ return new class extends Migration
             $table->integer('last_activity')->index();
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
+    
     public function down(): void
     {
         Schema::dropIfExists('users');
@@ -1853,9 +1840,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('cache', function (Blueprint $table) {
@@ -1870,10 +1854,7 @@ return new class extends Migration
             $table->integer('expiration');
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
+    
     public function down(): void
     {
         Schema::dropIfExists('cache');
@@ -1893,9 +1874,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('jobs', function (Blueprint $table) {
@@ -1932,9 +1910,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('jobs');
@@ -1955,25 +1930,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('announcements', function (Blueprint $table) {
             $table->id();
             $table->string('title');
             $table->text('content');
-            $table->string('image_path')->nullable(); // Still useful for the landing page
-            $table->date('start_date')->nullable(); // The date the announcement becomes active
-            $table->date('end_date')->nullable();   // The date the announcement expires
+            $table->string('image_path')->nullable(); 
+            $table->date('start_date')->nullable(); 
+            $table->date('end_date')->nullable();   
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('announcements');
@@ -1992,9 +1961,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('officials', function (Blueprint $table) {
@@ -2009,10 +1975,6 @@ return new class extends Migration
         });
     }
 
-
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('officials');
@@ -2060,12 +2022,10 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
-// Register the Composer autoloader...
 require __DIR__.'/../vendor/autoload.php';
 
 // Bootstrap Laravel and handle the request...
@@ -2086,10 +2046,6 @@ File: resources/css/app.css
 ======================================================================
 
 @import "tailwindcss";
-@source "../**/*.blade.php";
-@source "../**/*.js";
-@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
-@source "../../storage/framework/views/*.php";
 
 @plugin "daisyui";
 
@@ -2127,232 +2083,6 @@ File: resources/css/app.css
   --depth: 0;
   --noise: 0;
 }
-
-/* Extracted CSS from the new design */
-:root{
-  --bg:#f4f5f8;
-  --text:#0e1726;
-  --muted:#6b7280;
-  --brand:#1f5b85;
-  --brand-2:#2a6ea3;
-  --sidebar:#cfe1ef;
-  --card:#ffffff;
-  --table-head:#0f4e6c;
-  --table-head-2:#0b3b52;
-  --accent:#0ea5e9;
-  --success:#16a34a;
-  --warning:#f59e0b;
-  --danger:#dc2626;
-  --ring:0 0 0 3px rgba(31,91,133,.15);
-}
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-.app{
-  display:grid;
-  grid-template-columns:280px 1fr;
-  grid-template-rows:64px 1fr;
-  min-height:100dvh;
-  transition: grid-template-columns 0.3s ease;
-}
-.topbar{
-  grid-column:1/-1;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 16px;
-  background:var(--brand);
-  color:#fff;
-  border-bottom:1px solid rgba(255,255,255,.15);
-}
-.brand{
-  display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.2px
-}
-.brand img{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#e5e7eb}
-.brand .meta{display:flex;flex-direction:column;line-height:1.1}
-.brand .meta span:first-child{font-size:14px;opacity:.95}
-.brand .meta span:last-child{font-size:12px;opacity:.85}
-.top-actions{display:flex;align-items:center;gap:12px}
-.user-dropdown { position: relative; }
-.user-dropdown .dropdown-menu {
-    display: none;
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 8px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.15);
-    min-width: 160px;
-    z-index: 10;
-    overflow: hidden;
-}
-.user-dropdown:hover .dropdown-menu { display: block; }
-.dropdown-menu a, .dropdown-menu button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 8px 12px;
-    color: var(--text);
-    font-size: 14px;
-    background: none;
-    border: none;
-    cursor: pointer;
-}
-.dropdown-menu a:hover, .dropdown-menu button:hover {
-    background: var(--bg);
-}
-.sidebar{
-  grid-row:2;grid-column:1;
-  background:var(--sidebar);
-  padding:16px 12px;
-  border-right:1px solid rgba(0,0,0,.06);
-  transition: padding 0.3s ease;
-}
-.sidebar .toggle{
-  display:flex;align-items:center;margin:2px 6px 14px;color:#0b3b52;
-}
-.hamburger-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 6px;
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--table-head-2);
-}
-.hamburger-btn:hover {
-    background: rgba(0,0,0,0.1);
-}
-.hamburger-btn svg {
-    transition: transform 0.3s ease;
-}
-.app.sidebar-collapsed .hamburger-btn svg {
-    transform: rotate(90deg);
-}
-
-.nav{
-  display:flex;flex-direction:column;gap:6px
-}
-.nav a{
-  display:flex;align-items:center;gap:12px;
-  padding:10px 12px;border-radius:10px;text-decoration:none;color: var(--table-head-2);
-  font-weight:800;letter-spacing:.2px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.nav a i{width:24px;text-align:center;font-size:20px; flex-shrink: 0;}
-.nav a.active{
-  background:#ffffff;border:1px solid rgba(11,59,82,.15);color:var(--table-head-2)
-}
-.nav a:hover{background:rgba(255,255,255,.65)}
-.content{
-  grid-row:2;grid-column:2;
-  padding:24px 28px 40px;
-}
-.page-head{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px
-}
-.page-title{
-  font-size:32px;font-weight:800;letter-spacing:.2px
-}
-.actions{display:flex;align-items:center;gap:10px}
-.primary-btn{
-  display:inline-flex;align-items:center;gap:8px;background:#e6f3fb;color:#0b3b52;
-  border:1px solid rgba(11,59,82,.25);padding:10px 14px;border-radius:12px;
-  font-weight:800;text-decoration:none;transition:.2s
-}
-.primary-btn:hover{background:#fff;box-shadow:var(--ring)}
-.card{
-  background:var(--card);
-  border:1px solid rgba(0,0,0,.06);
-  border-radius:12px;
-  overflow:hidden;
-}
-.table-wrap{overflow:auto;border-radius:12px}
-table{width:100%;border-collapse:separate;border-spacing:0}
-thead th{
-  background:linear-gradient(0deg,var(--table-head),var(--table-head-2));
-  color:#fff;font-size:13px;letter-spacing:.6px;text-transform:uppercase;
-  padding:14px 12px;border-right:1px solid rgba(255,255,255,.15)
-}
-thead th:last-child{border-right:none}
-tbody tr{background:#fff}
-tbody tr:nth-child(even){background:#f9fafb}
-tbody td{
-  padding:12px;border-top:1px solid #e5e7eb;border-right:1px solid #eef2f7;font-size:14px
-}
-tbody td:last-child{border-right:none}
-.col-actions{
-  display:flex;align-items:center;gap:10px;justify-content:center
-}
-.icon-btn{
-  width:28px;height:28px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;
-  display:grid;place-items:center;cursor:pointer;transition:.2s
-}
-.icon-btn:hover{box-shadow:var(--ring)}
-.icon-view{color:var(--accent)}
-.icon-edit{color:#0ea34b}
-.icon-del{color:var(--danger)}
-.badge{
-  display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;
-  background:#eef6ff;border:1px solid #c6e1ff;font-weight:700;font-size:12px;color:#0b3b52
-}
-
-/* Sidebar collapsed styles */
-.app.sidebar-collapsed {
-    grid-template-columns: 84px 1fr;
-}
-.app.sidebar-collapsed .sidebar {
-    padding: 14px 8px;
-}
-.app.sidebar-collapsed .nav a {
-    justify-content: center;
-}
-.app.sidebar-collapsed .nav a span {
-    display: none;
-}
-.app.sidebar-collapsed .sidebar .toggle {
-    justify-content: center;
-}
-
-@media (max-width:720px){
-  .app{grid-template-columns:1fr}
-  .sidebar{position:fixed;inset:64px auto 0 0;width:82vw;transform:translateX(-100%);transition:.25s; z-index: 50;}
-  .sidebar.open{transform:translateX(0)}
-  
-  .app.sidebar-collapsed {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* --- ANNOUNCEMENT MODAL STYLES --- */
-.modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
-.modal.open { display: flex; align-items: center; justify-content: center; }
-.modal-content { background-color: #F9F7F3; width: 90%; max-width: 500px; border-radius: 16px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,.25); }
-.modal-header { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--table-head); color:white; }
-.modal-header img { width:32px; height:32px; border-radius: 50%; }
-.modal-header h3 { font-weight: 700; font-size: 16px; }
-.modal-body { padding: 24px 24px 16px; }
-.modal-body .block { margin-bottom: 16px; }
-.modal-body .lbl { font-weight: 700; font-size: 14px; color: #111; margin-bottom: 8px; display: block; }
-.modal-body .input { width: 100%; height: 40px; border-radius: 8px; background: white; border: 1px solid #ced4da; padding: 0 14px; font-weight: 600; outline:none; box-shadow: inset 0 1px 2px rgba(0,0,0,.075); }
-.modal-body .textarea { width: 100%; height: 120px; border-radius: 8px; background: white; border: 1px solid #ced4da; padding: 10px 14px; font-weight: 600; resize: vertical; outline:none; box-shadow: inset 0 1px 2px rgba(0,0,0,.075); }
-.date-input-wrapper { position: relative; }
-.date-input-wrapper .fa-calendar-days { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px 24px; background: transparent; }
-.modal-footer button { border:none; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 13px; cursor: pointer; letter-spacing: .3px; }
-.modal-footer .btn-cancel { background: #d0dce7; color: #0b3b52; }
-.modal-footer .btn-add, .modal-footer .btn-save { background: #5a9c86; color: white; }
 ======================================================================
 File: resources/js/app.js
 ======================================================================
@@ -2390,39 +2120,39 @@ File: resources/views/admin/announcements/create.blade.php
 @section('title', 'Create New Announcement')
 
 @section('content')
-    <h2 class="text-2xl font-bold mb-6">Create a New Announcement</h2>
+<h2 class="text-2xl font-bold mb-6">Create a New Announcement</h2>
 
-    <form action="{{ route('admin.announcements.store') }}" method="POST" class="bg-white p-8 rounded-lg shadow-md space-y-6">
-        @csrf
+<form action="{{ route('admin.announcements.store') }}" method="POST" class="bg-white p-8 rounded-lg shadow-md space-y-6">
+    @csrf
 
+    <div>
+        <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+        <input type="text" name="title" id="title" class="input input-bordered w-full mt-1" value="{{ old('title') }}" required>
+    </div>
+
+    <div>
+        <label for="content" class="block text-sm font-medium text-gray-700">Content</label>
+        <textarea name="content" id="content" rows="6" class="textarea textarea-bordered w-full mt-1" required>{{ old('content') }}</textarea>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-            <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
-            <input type="text" name="title" id="title" class="input input-bordered w-full mt-1" value="{{ old('title') }}" required>
+            <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date (Optional)</label>
+            <input type="date" name="start_date" id="start_date" class="input input-bordered w-full mt-1" value="{{ old('start_date') }}">
+            <p class="text-xs text-gray-500 mt-1">The date the announcement becomes visible.</p>
         </div>
-
         <div>
-            <label for="content" class="block text-sm font-medium text-gray-700">Content</label>
-            <textarea name="content" id="content" rows="6" class="textarea textarea-bordered w-full mt-1" required>{{ old('content') }}</textarea>
+            <label for="end_date" class="block text-sm font-medium text-gray-700">End Date (Optional)</label>
+            <input type="date" name="end_date" id="end_date" class="input input-bordered w-full mt-1" value="{{ old('end_date') }}">
+            <p class="text-xs text-gray-500 mt-1">The date the announcement expires.</p>
         </div>
+    </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date (Optional)</label>
-                <input type="date" name="start_date" id="start_date" class="input input-bordered w-full mt-1" value="{{ old('start_date') }}">
-                <p class="text-xs text-gray-500 mt-1">The date the announcement becomes visible.</p>
-            </div>
-            <div>
-                <label for="end_date" class="block text-sm font-medium text-gray-700">End Date (Optional)</label>
-                <input type="date" name="end_date" id="end_date" class="input input-bordered w-full mt-1" value="{{ old('end_date') }}">
-                <p class="text-xs text-gray-500 mt-1">The date the announcement expires.</p>
-            </div>
-        </div>
-
-        <div class="flex justify-end space-x-4">
-            <a href="{{ route('admin.announcements.index') }}" class="btn btn-ghost">Cancel</a>
-            <button type="submit" class="btn btn-primary">Save Announcement</button>
-        </div>
-    </form>
+    <div class="flex justify-end space-x-4">
+        <a href="{{ route('admin.announcements.index') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save Announcement</button>
+    </div>
+</form>
 @endsection
 ======================================================================
 File: resources/views/admin/announcements/edit.blade.php
@@ -2433,40 +2163,40 @@ File: resources/views/admin/announcements/edit.blade.php
 @section('title', 'Edit Announcement')
 
 @section('content')
-    <h2 class="text-2xl font-bold mb-6">Edit Announcement</h2>
+<h2 class="text-2xl font-bold mb-6">Edit Announcement</h2>
 
-    <form action="{{ route('admin.announcements.update', $announcement->id) }}" method="POST" class="bg-white p-8 rounded-lg shadow-md space-y-6">
-        @csrf
-        @method('PUT')
+<form action="{{ route('admin.announcements.update', $announcement->id) }}" method="POST" class="bg-white p-8 rounded-lg shadow-md space-y-6">
+    @csrf
+    @method('PUT')
 
+    <div>
+        <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+        <input type="text" name="title" id="title" class="input input-bordered w-full mt-1" value="{{ old('title', $announcement->title) }}" required>
+    </div>
+
+    <div>
+        <label for="content" class="block text-sm font-medium text-gray-700">Content</label>
+        <textarea name="content" id="content" rows="6" class="textarea textarea-bordered w-full mt-1" required>{{ old('content', $announcement->content) }}</textarea>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-            <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
-            <input type="text" name="title" id="title" class="input input-bordered w-full mt-1" value="{{ old('title', $announcement->title) }}" required>
+            <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date (Optional)</label>
+            <input type="date" name="start_date" id="start_date" class="input input-bordered w-full mt-1" value="{{ old('start_date', $announcement->start_date) }}">
+            <p class="text-xs text-gray-500 mt-1">The date the announcement becomes visible.</p>
         </div>
-
         <div>
-            <label for="content" class="block text-sm font-medium text-gray-700">Content</label>
-            <textarea name="content" id="content" rows="6" class="textarea textarea-bordered w-full mt-1" required>{{ old('content', $announcement->content) }}</textarea>
+            <label for="end_date" class="block text-sm font-medium text-gray-700">End Date (Optional)</label>
+            <input type="date" name="end_date" id="end_date" class="input input-bordered w-full mt-1" value="{{ old('end_date', $announcement->end_date) }}">
+            <p class="text-xs text-gray-500 mt-1">The date the announcement expires.</p>
         </div>
+    </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date (Optional)</label>
-                <input type="date" name="start_date" id="start_date" class="input input-bordered w-full mt-1" value="{{ old('start_date', $announcement->start_date) }}">
-                <p class="text-xs text-gray-500 mt-1">The date the announcement becomes visible.</p>
-            </div>
-            <div>
-                <label for="end_date" class="block text-sm font-medium text-gray-700">End Date (Optional)</label>
-                <input type="date" name="end_date" id="end_date" class="input input-bordered w-full mt-1" value="{{ old('end_date', $announcement->end_date) }}">
-                <p class="text-xs text-gray-500 mt-1">The date the announcement expires.</p>
-            </div>
-        </div>
-
-        <div class="flex justify-end space-x-4">
-            <a href="{{ route('admin.announcements.index') }}" class="btn btn-ghost">Cancel</a>
-            <button type="submit" class="btn btn-primary">Update Announcement</button>
-        </div>
-    </form>
+    <div class="flex justify-end space-x-4">
+        <a href="{{ route('admin.announcements.index') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">Update Announcement</button>
+    </div>
+</form>
 @endsection
 ======================================================================
 File: resources/views/admin/announcements/index.blade.php
@@ -2483,227 +2213,544 @@ File: resources/views/admin/announcements/index.blade.php
 
 <div class="space-y-8">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="p-6 rounded-xl border border-[var(--brand)] bg-blue-50 text-center"><div class="text-4xl font-extrabold text-[var(--brand)]">{{ $total_announcements }}</div><div class="mt-1 text-sm font-bold text-[var(--brand)] tracking-wider">TOTAL ANNOUNCEMENTS</div></div>
-        <div class="p-6 rounded-xl border border-[var(--brand)] bg-blue-50 text-center"><div class="text-4xl font-extrabold text-[var(--brand)]">{{ $ended_announcements }}</div><div class="mt-1 text-sm font-bold text-[var(--brand)] tracking-wider">ENDED ANNOUNCEMENTS</div></div>
-        <div class="p-6 rounded-xl border border-[var(--brand)] bg-blue-50 text-center"><div class="text-4xl font-extrabold text-[var(--brand)]">{{ $ongoing_announcements }}</div><div class="mt-1 text-sm font-bold text-[var(--brand)] tracking-wider">ONGOING ANNOUNCEMENTS</div></div>
+        <div class="p-6 rounded-xl border border-[var(--brand)] bg-blue-50 text-center">
+            <div class="text-4xl font-extrabold text-[var(--brand)]">{{ $total_announcements }}</div>
+            <div class="mt-1 text-sm font-bold text-[var(--brand)] tracking-wider">TOTAL ANNOUNCEMENTS</div>
+        </div>
+        <div class="p-6 rounded-xl border border-[var(--brand)] bg-blue-50 text-center">
+            <div class="text-4xl font-extrabold text-[var(--brand)]">{{ $ended_announcements }}</div>
+            <div class="mt-1 text-sm font-bold text-[var(--brand)] tracking-wider">ENDED ANNOUNCEMENTS</div>
+        </div>
+        <div class="p-6 rounded-xl border border-[var(--brand)] bg-blue-50 text-center">
+            <div class="text-4xl font-extrabold text-[var(--brand)]">{{ $ongoing_announcements }}</div>
+            <div class="mt-1 text-sm font-bold text-[var(--brand)] tracking-wider">ONGOING ANNOUNCEMENTS</div>
+        </div>
     </div>
 
     <div class="flex justify-between items-center">
         <div class="flex items-center gap-4">
-            <button class="primary-btn !py-2 !px-4 !rounded-lg !gap-2"><span>CALENDAR</span><i class="fa-solid fa-chevron-down text-xs"></i></button>
-            <button class="primary-btn !py-2 !px-4 !rounded-lg !gap-2"><span>STATUS</span><i class="fa-solid fa-chevron-down text-xs"></i></button>
+            <button class="primary-btn !py-2 !px-4 !rounded-lg !gap-2">
+                <span>CALENDAR</span><i class="fa-solid fa-chevron-down text-xs"></i>
+            </button>
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button @click="open = !open" class="primary-btn !py-2 !px-4 !rounded-lg !gap-2">
+                    <span>STATUS: {{ ucfirst($status ?? 'All') }}</span><i class="fa-solid fa-chevron-down text-xs"></i>
+                </button>
+                <div x-show="open"
+                    x-transition
+                    class="absolute top-full left-0 mt-2 z-10 w-48 bg-white rounded-lg shadow-lg border border-gray-200"
+                    style="display: none;">
+                    <a href="{{ route('admin.announcements.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">All</a>
+                    <a href="{{ route('admin.announcements.index', ['status' => 'ongoing']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Ongoing</a>
+                    <a href="{{ route('admin.announcements.index', ['status' => 'scheduled']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Scheduled</a>
+                    <a href="{{ route('admin.announcements.index', ['status' => 'ended']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Ended</a>
+                </div>
+            </div>
         </div>
-        <button type="button" id="addAnnouncementBtn" class="primary-btn"><span>ADD ANNOUNCEMENT</span><i class="fa-solid fa-circle-plus"></i></button>
+
+        <button type="button" id="addAnnouncementBtn" class="primary-btn">
+            <span>ADD ANNOUNCEMENT</span><i class="fa-solid fa-circle-plus"></i>
+        </button>
     </div>
 
     <div class="card table-wrap">
         <table>
-            <thead><tr><th>Title</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Action</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
             <tbody>
                 @forelse ($announcements as $announcement)
-                    @php
-                        $now = \Carbon\Carbon::now();
-                        $startDate = $announcement->start_date ? \Carbon\Carbon::parse($announcement->start_date) : null;
-                        $endDate = $announcement->end_date ? \Carbon\Carbon::parse($announcement->end_date) : null;
-                        $status = 'Ongoing';
-                        if ($endDate && $endDate->isPast()) { $status = 'Ended'; } 
-                        elseif ($startDate && $startDate->isFuture()) { $status = 'Scheduled'; }
-                    @endphp
-                    <tr>
-                        <td>{{ Str::limit($announcement->title, 40) }}</td>
-                        <td>{{ $startDate ? $startDate->format('m/d/Y') : 'N/A' }}</td>
-                        <td>{{ $endDate ? $endDate->format('m/d/Y') : 'N/A' }}</td>
-                        <td>{{ $status }}</td>
-                        <td>
-                            <div class="col-actions">
-                                <button class="icon-btn icon-view"><i class="fa-regular fa-eye"></i></button>
-                                <button data-announcement='{{ json_encode($announcement) }}' class="icon-btn icon-edit edit-btn"><i class="fa-regular fa-pen-to-square"></i></button>
-                            </div>
-                        </td>
-                    </tr>
+                @php
+                $now = \Carbon\Carbon::now();
+                $startDate = $announcement->start_date ? \Carbon\Carbon::parse($announcement->start_date) : null;
+                $endDate = $announcement->end_date ? \Carbon\Carbon::parse($announcement->end_date) : null;
+                $status_text = 'Ongoing';
+                if ($endDate && $endDate->isPast()) { $status_text = 'Ended'; }
+                elseif ($startDate && $startDate->isFuture()) { $status_text = 'Scheduled'; }
+                @endphp
+                <tr>
+                    <td>{{ Str::limit($announcement->title, 40) }}</td>
+                    <td>{{ $startDate ? $startDate->format('m/d/Y') : 'N/A' }}</td>
+                    <td>{{ $endDate ? $endDate->format('m/d/Y') : 'N/A' }}</td>
+                    <td>{{ $status_text }}</td>
+                    <td>
+                        <div class="col-actions">
+                            <button type="button" class="icon-btn icon-view" title="View" data-announcement='@json($announcement)'>
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                            <button data-announcement='@json($announcement)' class="icon-btn icon-edit edit-btn" title="Edit">
+                                <i class="fa-regular fa-pen-to-square"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center py-4">No announcements found.</td></tr>
+                <tr>
+                    <td colspan="5" class="text-center py-4">No announcements found for the selected status.</td>
+                </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-    
-    @if ($announcements->hasPages())<div class="flex justify-end pt-4">{{ $announcements->links() }}</div>@endif
+
+    {{-- CUSTOM PAGINATION CONTROLS --}}
+    @if ($announcements->hasPages())
+    <div class="flex justify-end items-center gap-3 pt-4">
+        {{-- Previous Page Link --}}
+        @if ($announcements->onFirstPage())
+        <span class="bg-gray-300 text-gray-500 font-bold py-2 px-4 rounded-full cursor-not-allowed">
+            &lt;&lt; PREVIOUS
+        </span>
+        @else
+        <a href="{{ $announcements->previousPageUrl() }}" class="bg-[#a2c4d9] text-black font-bold py-2 px-4 rounded-full hover:bg-opacity-90">
+            &lt;&lt; PREVIOUS
+        </a>
+        @endif
+
+        {{-- Next Page Link --}}
+        @if ($announcements->hasMorePages())
+        <a href="{{ $announcements->nextPageUrl() }}" class="bg-[#a2c4d9] text-black font-bold py-2 px-4 rounded-full hover:bg-opacity-90">
+            NEXT &gt;&gt;
+        </a>
+        @else
+        <span class="bg-gray-300 text-gray-500 font-bold py-2 px-4 rounded-full cursor-not-allowed">
+            NEXT &gt;&gt;
+        </span>
+        @endif
+    </div>
+    @endif
 </div>
 
-<!-- Add/Edit Announcement Modal -->
-<div id="announcementModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <img src="{{ asset('img/barangaylogo.jpg') }}" alt="Logo">
-            <h3 id="modalTitle">Barangay Daang Bakal</h3>
+{{-- ADD/EDIT MODAL --}}
+<div id="announcementModal" class="exact-modal" aria-hidden="true" role="dialog">
+    <div class="exact-modal__overlay" data-close></div>
+    <div class="exact-modal__panel" role="document" aria-labelledby="modalTitle">
+        <div class="exact-modal__header">
+            <div class="flex items-center gap-3">
+                <img src="{{ asset('img/barangaylogo.jpg') }}" alt="Logo" class="w-8 h-8 rounded-full object-cover">
+                <h3 id="modalTitle" class="exact-modal__title">Barangay Daang Bakal</h3>
+            </div>
+            <button type="button" class="exact-modal__close" aria-label="Close" data-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
         <form id="announcementForm" method="POST" action="">
             @csrf
             <div id="method-field"></div>
-            <div class="modal-body">
-                <div class="block">
-                    <label for="title" class="lbl">Title:</label>
-                    <input type="text" name="title" id="title" class="input" required>
+            <div class="exact-modal__body">
+                <div class="block"><label for="title" class="lbl">Title:</label><input type="text" name="title" id="title" class="input exact-input" required></div>
+                <div class="block"><label for="content" class="lbl">Content:</label><textarea name="content" id="content" class="textarea exact-textarea" rows="4" required></textarea></div>
+                <div class="block"><label for="start_date" class="lbl">Start Date:</label>
+                    <div class="exact-date__wrap"><input type="date" name="start_date" id="start_date" class="input exact-input"><span class="exact-date__icon"><i class="fa-solid fa-calendar-days"></i></span></div>
                 </div>
-                <div class="block">
-                    <label for="content" class="lbl">Content:</label>
-                    <textarea name="content" id="content" class="textarea" required></textarea>
-                </div>
-                <div class="block date-input-wrapper">
-                    <label for="start_date" class="lbl">Start Date:</label>
-                    <input type="date" name="start_date" id="start_date" class="input">
-                    <i class="fa-solid fa-calendar-days"></i>
-                </div>
-                <div class="block date-input-wrapper">
-                    <label for="end_date" class="lbl">End Date:</label>
-                    <input type="date" name="end_date" id="end_date" class="input">
-                    <i class="fa-solid fa-calendar-days"></i>
+                <div class="block"><label for="end_date" class="lbl">End Date:</label>
+                    <div class="exact-date__wrap"><input type="date" name="end_date" id="end_date" class="input exact-input"><span class="exact-date__icon"><i class="fa-solid fa-calendar-days"></i></span></div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" id="cancelBtn" class="btn-cancel">CANCEL</button>
-                <button type="submit" id="modalSubmitButton" class="btn-add">ADD</button>
+            <div class="exact-modal__footer">
+                <button type="button" class="exact-btn exact-btn--cancel" data-close>CANCEL</button>
+                <button type="submit" id="modalSubmitButton" class="exact-btn exact-btn--add">ADD</button>
             </div>
         </form>
     </div>
 </div>
+
+{{-- VIEW MODAL --}}
+<div id="viewAnnouncementModal" class="exact-modal" aria-hidden="true" role="dialog">
+    <div class="exact-modal__overlay" data-close></div>
+    <div class="exact-modal__panel" role="document">
+        <div class="exact-modal__header">
+            <div class="flex items-center gap-3">
+                <img src="{{ asset('img/barangaylogo.jpg') }}" alt="Logo" class="w-8 h-8 rounded-full object-cover">
+                <h3 class="exact-modal__title">Barangay Daang Bakal</h3>
+            </div>
+            <button type="button" class="exact-modal__close" aria-label="Close" data-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="exact-modal__body">
+            <div class="block"><label class="lbl">Title:</label><input type="text" id="view_title" class="input exact-input" readonly></div>
+            <div class="block"><label class="lbl">Content:</label><textarea id="view_content" class="textarea exact-textarea" rows="4" readonly></textarea></div>
+            <div class="block"><label class="lbl">Start Date:</label>
+                <div class="exact-date__wrap"><input type="text" id="view_start_date" class="input exact-input" readonly></div>
+            </div>
+            <div class="block"><label class="lbl">End Date:</label>
+                <div class="exact-date__wrap"><input type="text" id="view_end_date" class="input exact-input" readonly></div>
+            </div>
+        </div>
+        <div class="exact-modal__footer">
+            <button type="button" class="exact-btn exact-btn--cancel" data-close>CLOSE</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .exact-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 9999;
+    }
+
+    .exact-modal.open {
+        display: block;
+    }
+
+    .exact-modal__overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, .45);
+    }
+
+    .exact-modal__panel {
+        position: relative;
+        margin: 4vh auto;
+        width: min(600px, 92%);
+        background: #f3ede5;
+        border-radius: 18px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+        border: 2px solid #101010;
+        overflow: hidden;
+    }
+
+    .exact-modal__header {
+        background: #2e658d;
+        color: #fff;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, .12);
+    }
+
+    .exact-modal__title {
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .exact-modal__close {
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        color: #fff;
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .exact-modal__body {
+        padding: 16px 18px 8px;
+    }
+
+    .exact-modal__body .block {
+        margin-bottom: 1rem;
+    }
+
+    .exact-modal__body .lbl {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .exact-modal__body .input,
+    .exact-modal__body .textarea {
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px 12px;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, .05) inset, 0 1px 2px rgba(0, 0, 0, .06);
+        outline: none;
+    }
+
+    .exact-modal__body .textarea {
+        min-height: 110px;
+        resize: vertical;
+    }
+
+    .exact-date__wrap {
+        position: relative;
+    }
+
+    .exact-date__icon {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #eef0f2;
+        border: 1px solid #cfd6dc;
+        border-radius: 6px;
+        width: 34px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        color: #5b6670;
+    }
+
+    #view_start_date,
+    #view_end_date {
+        padding-right: 2.5rem;
+    }
+
+    #view_start_date+.exact-date__icon,
+    #view_end_date+.exact-date__icon {
+        pointer-events: none;
+    }
+
+    .exact-modal__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 18px;
+        background: transparent;
+        border-top: 1px solid rgba(0, 0, 0, .08);
+    }
+
+    .exact-btn {
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-weight: 700;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+        cursor: pointer;
+    }
+
+    .exact-btn--cancel {
+        background: #b9c9d6;
+        color: #203544;
+    }
+
+    .exact-btn--add {
+        background: #2e9b58;
+        color: #0d1e11;
+    }
+
+    .exact-btn:active {
+        transform: translateY(1px);
+    }
+</style>
 @endsection
 
 @push('scripts')
+<script src="//unpkg.com/alpinejs" defer></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('announcementModal');
-    if (!modal) return;
-
-    const form = document.getElementById('announcementForm');
-    const modalTitle = document.getElementById('modalTitle');
-    const methodField = document.getElementById('method-field');
-    const submitButton = document.getElementById('modalSubmitButton');
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-    const openModal = () => modal.classList.add('open');
-    const closeModal = () => modal.classList.remove('open');
-
-    const openAddModal = () => {
-        form.reset();
-        form.action = "{{ route('admin.announcements.store') }}";
-        modalTitle.textContent = "Barangay Daang Bakal";
-        methodField.innerHTML = "";
-        submitButton.textContent = "ADD";
-        submitButton.className = "btn-add";
-        openModal();
-    };
-
-    const openEditModal = (button) => {
-        const announcement = JSON.parse(button.getAttribute('data-announcement'));
-        form.reset();
-        form.action = `/admin/announcements/${announcement.id}`;
-        methodField.innerHTML = `@method("PUT")`;
-        
-        document.getElementById('title').value = announcement.title;
-        document.getElementById('content').value = announcement.content;
-        document.getElementById('start_date').value = announcement.start_date ? announcement.start_date.split(' ')[0] : '';
-        document.getElementById('end_date').value = announcement.end_date ? announcement.end_date.split(' ')[0] : '';
-
-        submitButton.textContent = "SAVE";
-        submitButton.className = "btn-save";
-        openModal();
-    };
-
-    form.addEventListener('submit', async function(event) {
-        event.preventDefault();
-
-        const formData = new FormData(form);
-        const action = form.getAttribute('action');
-        
-        try {
-            const response = await fetch(action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
-                },
-                body: formData,
-            });
-
-            if (response.ok) {
-                window.location.reload();
-            } else if (response.status === 422) {
-                const result = await response.json();
-                let errorMessages = "Please fix the following errors:\n";
-                for (const key in result.errors) {
-                    errorMessages += `- ${result.errors[key].join(', ')}\n`;
-                }
-                alert(errorMessages);
+    document.addEventListener('DOMContentLoaded', () => {
+        function lockScroll(lock) {
+            if (lock) {
+                document.body.dataset.prevOverflow = document.body.style.overflow || '';
+                document.body.style.overflow = 'hidden';
             } else {
-                throw new Error('Something went wrong on the server.');
+                document.body.style.overflow = document.body.dataset.prevOverflow || '';
+                delete document.body.dataset.prevOverflow;
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An unexpected error occurred. Please try again.');
         }
+
+        const modal = document.getElementById('announcementModal');
+        if (modal) {
+            const form = document.getElementById('announcementForm');
+            const methodField = document.getElementById('method-field');
+            const submitBtn = document.getElementById('modalSubmitButton');
+            const modalTitle = document.getElementById('modalTitle');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const titleEl = document.getElementById('title');
+            const contentEl = document.getElementById('content');
+            const startEl = document.getElementById('start_date');
+            const endEl = document.getElementById('end_date');
+
+            function openModal() {
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+                lockScroll(true);
+                setTimeout(() => titleEl?.focus(), 10);
+            }
+
+            function closeModal() {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+                lockScroll(false);
+                form?.reset();
+                methodField.innerHTML = '';
+                submitBtn.textContent = 'ADD';
+                submitBtn.className = 'exact-btn exact-btn--add';
+            }
+
+            window.openAddModal = function() {
+                form.reset();
+                form.action = "{{ route('admin.announcements.store') }}";
+                modalTitle.textContent = "Add New Announcement";
+                methodField.innerHTML = "";
+                submitBtn.textContent = "ADD";
+                submitBtn.className = "exact-btn exact-btn--add";
+                openModal();
+            }
+            window.openEditModal = function(button) {
+                const a = JSON.parse(button.getAttribute('data-announcement'));
+                form.reset();
+                form.action = `/admin/announcements/${a.id}`;
+                methodField.innerHTML = `<input type="hidden" name="_method" value="PUT">`;
+                titleEl.value = a.title ?? '';
+                contentEl.value = a.content ?? '';
+                startEl.value = a.start_date ? String(a.start_date).split(' ')[0] : '';
+                endEl.value = a.end_date ? String(a.end_date).split(' ')[0] : '';
+                modalTitle.textContent = "Edit Announcement";
+                submitBtn.textContent = "SAVE";
+                submitBtn.className = "exact-btn exact-btn--add";
+                openModal();
+            }
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                try {
+                    const res = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+                    if (res.ok) {
+                        location.reload();
+                    } else if (res.status === 422) {
+                        const data = await res.json();
+                        let msg = 'Please fix the following errors:\n';
+                        for (const k in data.errors) {
+                            msg += `- ${data.errors[k].join(', ')}\n`;
+                        }
+                        alert(msg);
+                    } else {
+                        throw new Error('Server error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('An unexpected error occurred. Please try again.');
+                }
+            });
+        }
+
+        const viewModal = document.getElementById('viewAnnouncementModal');
+        if (viewModal) {
+            const viewTitleEl = document.getElementById('view_title');
+            const viewContentEl = document.getElementById('view_content');
+            const viewStartEl = document.getElementById('view_start_date');
+            const viewEndEl = document.getElementById('view_end_date');
+
+            function openViewModal(button) {
+                const a = JSON.parse(button.getAttribute('data-announcement'));
+                viewTitleEl.value = a.title ?? '';
+                viewContentEl.value = a.content ?? '';
+                viewStartEl.value = a.start_date ? new Date(a.start_date).toLocaleDateString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric'
+                }) : 'N/A';
+                viewEndEl.value = a.end_date ? new Date(a.end_date).toLocaleDateString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric'
+                }) : 'N/A';
+                viewModal.classList.add('open');
+                viewModal.setAttribute('aria-hidden', 'false');
+                lockScroll(true);
+            }
+            window.openViewModal = openViewModal;
+        }
+
+        document.addEventListener('click', (ev) => {
+            const addBtn = ev.target.closest('#addAnnouncementBtn');
+            const editBtn = ev.target.closest('.edit-btn');
+            const viewBtn = ev.target.closest('.icon-view');
+            const closeEl = ev.target.closest('[data-close]');
+
+            if (addBtn) {
+                window.openAddModal();
+                return;
+            }
+            if (editBtn) {
+                window.openEditModal(editBtn);
+                return;
+            }
+            if (viewBtn) {
+                window.openViewModal(viewBtn);
+                return;
+            }
+            if (closeEl) {
+                const openModal = ev.target.closest('.exact-modal');
+                if (openModal) {
+                    openModal.classList.remove('open');
+                    openModal.setAttribute('aria-hidden', 'true');
+                    lockScroll(false);
+                }
+            }
+            if (ev.target.matches('.exact-modal__overlay')) {
+                const openModal = ev.target.closest('.exact-modal');
+                if (openModal) {
+                    openModal.classList.remove('open');
+                    openModal.setAttribute('aria-hidden', 'true');
+                    lockScroll(false);
+                }
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const openModal = document.querySelector('.exact-modal.open');
+                if (openModal) {
+                    openModal.classList.remove('open');
+                    openModal.setAttribute('aria-hidden', 'true');
+                    lockScroll(false);
+                }
+            }
+        });
     });
-
-    document.addEventListener('click', function (event) {
-        const addBtn = event.target.closest('#addAnnouncementBtn');
-        const editBtn = event.target.closest('.edit-btn');
-        const cancelBtn = event.target.closest('#cancelBtn');
-
-        if (addBtn) {
-            openAddModal();
-            return;
-        }
-
-        if (editBtn) {
-            openEditModal(editBtn);
-            return;
-        }
-        
-        if (cancelBtn) {
-            closeModal();
-            return;
-        }
-
-        if (event.target === modal) {
-            closeModal();
-        }
-    });
-});
 </script>
 @endpush
 ======================================================================
 File: resources/views/admin/announcements/show.blade.php
 ======================================================================
 
-@extends('layouts.admin')
+@extends('layouts.app')
 
-@section('title', 'View Announcement')
+@section('title', $announcement->title)
 
 @section('content')
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h1 class="h4 mb-0">View Announcement</h1>
-        <a href="{{ route('admin.announcements.index') }}" class="btn btn-sm btn-link">
-            &larr; Back to Announcements
-        </a>
-    </div>
 
-    <div class="card">
-        <div class="card-header">
-            <h5 class="card-title mb-0">{{ $announcement->title }}</h5>
+<x-public.navbar />
+
+<div class="bg-base-100 py-16 px-4 sm:px-8">
+    <div class="container mx-auto max-w-4xl">
+
+        <div class="text-center mb-12">
+            @php
+            $displayDate = $announcement->start_date ? \Carbon\Carbon::parse($announcement->start_date) : $announcement->created_at;
+            @endphp
+            <p class="text-lg font-semibold text-blue-800">{{ $displayDate->format('F d, Y') }}</p>
+            <h1 class="text-4xl sm:text-5xl font-bold text-slate-800 mt-2">{{ $announcement->title }}</h1>
         </div>
-        <div class="card-body">
-            <p class="text-muted mb-3">
-                Created on: {{ $announcement->created_at->format('F d, Y \a\t h:i A') }}
-            </p>
-            <div class="prose">
+
+        <div class="prose max-w-none text-lg text-slate-700 leading-relaxed text-justify">
+            <p>
                 {!! nl2br(e($announcement->content)) !!}
-            </div>
+            </p>
         </div>
-        <div class="card-footer text-end">
-            <a href="{{ route('admin.announcements.edit', $announcement) }}" class="btn btn-primary">Edit</a>
+
+        <div class="text-center mt-16">
+            <a href="{{ url('/#announcements') }}" class="btn btn-outline btn-primary">
+                &larr; Back to All Announcements
+            </a>
         </div>
+
     </div>
+</div>
+
+<x-public.footer />
+
 @endsection
 ======================================================================
 File: resources/views/admin/dashboard.blade.php
@@ -2714,24 +2761,24 @@ File: resources/views/admin/dashboard.blade.php
 @section('title', 'Dashboard')
 
 @section('content')
-    <p class="text-xl font-semibold mb-6">Welcome to the ARIS Admin Panel!</p>
-    <p class="text-slate-600 mb-8">
-        This is the central hub for managing the content and users of the Barangay Daang Bakal website. You can manage announcements, update the list of officials, and oversee registered users from the sidebar navigation.
-    </p>
+<p class="text-xl font-semibold mb-6">Welcome to the ARIS Admin Panel!</p>
+<p class="text-slate-600 mb-8">
+    This is the central hub for managing the content and users of the Barangay Daang Bakal website. You can manage announcements, update the list of officials, and oversee registered users from the sidebar navigation.
+</p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
-            <h3 class="font-bold text-lg mb-2">Manage Announcements</h3>
-            <p class="text-slate-500 mb-4">Create, edit, and publish news and updates for the community.</p>
-            <a href="{{ route('admin.announcements.index') }}" class="btn btn-sm btn-primary">Go to Announcements</a>
-        </div>
-
-        <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
-            <h3 class="font-bold text-lg mb-2">Manage Officials</h3>
-            <p class="text-slate-500 mb-4">Update the list and photos of current barangay officials.</p>
-            <a href="#" class="btn btn-sm btn-primary">Go to Officials</a>
-        </div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+        <h3 class="font-bold text-lg mb-2">Manage Announcements</h3>
+        <p class="text-slate-500 mb-4">Create, edit, and publish news and updates for the community.</p>
+        <a href="{{ route('admin.announcements.index') }}" class="btn btn-sm btn-primary">Go to Announcements</a>
     </div>
+
+    <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+        <h3 class="font-bold text-lg mb-2">Manage Officials</h3>
+        <p class="text-slate-500 mb-4">Update the list and photos of current barangay officials.</p>
+        <a href="#" class="btn btn-sm btn-primary">Go to Officials</a>
+    </div>
+</div>
 @endsection
 ======================================================================
 File: resources/views/admin/officials/create.blade.php
@@ -2742,47 +2789,47 @@ File: resources/views/admin/officials/create.blade.php
 @section('title', 'Add New Official')
 
 @section('content')
-    <h2 class="text-2xl font-bold mb-6">Add a New Barangay Official</h2>
+<h2 class="text-2xl font-bold mb-6">Add a New Barangay Official</h2>
 
-    <form action="{{ route('admin.officials.store') }}" method="POST" enctype="multipart/form-data" class="bg-white p-8 rounded-lg shadow-md space-y-6">
-        @csrf
+<form action="{{ route('admin.officials.store') }}" method="POST" enctype="multipart/form-data" class="bg-white p-8 rounded-lg shadow-md space-y-6">
+    @csrf
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-                <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
-                <input type="text" name="first_name" id="first_name" class="input input-bordered w-full mt-1" value="{{ old('first_name') }}" required>
-            </div>
-            <div>
-                <label for="middle_initial" class="block text-sm font-medium text-gray-700">Middle Initial</label>
-                <input type="text" name="middle_initial" id="middle_initial" class="input input-bordered w-full mt-1" value="{{ old('middle_initial') }}">
-            </div>
-            <div>
-                <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
-                <input type="text" name="last_name" id="last_name" class="input input-bordered w-full mt-1" value="{{ old('last_name') }}" required>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label for="position" class="block text-sm font-medium text-gray-700">Position</label>
-                <input type="text" name="position" id="position" class="input input-bordered w-full mt-1" value="{{ old('position') }}" required>
-            </div>
-            <div>
-                <label for="display_order" class="block text-sm font-medium text-gray-700">Display Order</label>
-                <input type="number" name="display_order" id="display_order" class="input input-bordered w-full mt-1" value="{{ old('display_order', 0) }}" required>
-            </div>
-        </div>
-
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-            <label for="photo_path" class="block text-sm font-medium text-gray-700">Photo</label>
-            <input type="file" name="photo_path" id="photo_path" class="file-input file-input-bordered w-full mt-1">
+            <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+            <input type="text" name="first_name" id="first_name" class="input input-bordered w-full mt-1" value="{{ old('first_name') }}" required>
         </div>
+        <div>
+            <label for="middle_initial" class="block text-sm font-medium text-gray-700">Middle Initial</label>
+            <input type="text" name="middle_initial" id="middle_initial" class="input input-bordered w-full mt-1" value="{{ old('middle_initial') }}">
+        </div>
+        <div>
+            <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+            <input type="text" name="last_name" id="last_name" class="input input-bordered w-full mt-1" value="{{ old('last_name') }}" required>
+        </div>
+    </div>
 
-        <div class="flex justify-end space-x-4">
-            <a href="{{ route('admin.officials.index') }}" class="btn btn-ghost">Cancel</a>
-            <button type="submit" class="btn btn-primary">Save Official</button>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <label for="position" class="block text-sm font-medium text-gray-700">Position</label>
+            <input type="text" name="position" id="position" class="input input-bordered w-full mt-1" value="{{ old('position') }}" required>
         </div>
-    </form>
+        <div>
+            <label for="display_order" class="block text-sm font-medium text-gray-700">Display Order</label>
+            <input type="number" name="display_order" id="display_order" class="input input-bordered w-full mt-1" value="{{ old('display_order', 0) }}" required>
+        </div>
+    </div>
+
+    <div>
+        <label for="photo_path" class="block text-sm font-medium text-gray-700">Photo</label>
+        <input type="file" name="photo_path" id="photo_path" class="file-input file-input-bordered w-full mt-1">
+    </div>
+
+    <div class="flex justify-end space-x-4">
+        <a href="{{ route('admin.officials.index') }}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save Official</button>
+    </div>
+</form>
 @endsection
 ======================================================================
 File: resources/views/admin/officials/edit.blade.php
@@ -2848,73 +2895,863 @@ File: resources/views/admin/officials/index.blade.php
 
 @extends('layouts.admin')
 
+@section('title', 'Barangay Officials')
+
 @section('content')
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-[var(--text-primary)] tracking-wider">BARANGAY OFFICIALS</h1>
-    <button class="btn border-none bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg flex items-center gap-2 shadow-sm">
-        <span>ADD OFFICIAL</span>
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+<div class="page-head">
+    <div class="page-title">BARANGAY OFFICIALS</div>
+</div>
+
+<div class="flex justify-end items-center mb-6">
+    <button type="button" id="addOfficialBtn" class="primary-btn">
+        <span>ADD OFFICIAL</span><i class="fa-solid fa-circle-plus"></i>
     </button>
 </div>
 
-<div class="bg-white rounded-lg shadow-md overflow-hidden border-2 border-[#232C54]">
-    <table class="w-full">
-        <thead class="bg-[#232C54] text-white">
+<div class="card table-wrap">
+    <table>
+        <thead>
             <tr>
-                <th class="p-4 text-left text-sm font-bold uppercase tracking-wider">Last Name</th>
-                <th class="p-4 text-left text-sm font-bold uppercase tracking-wider">First Name</th>
-                <th class="p-4 text-left text-sm font-bold uppercase tracking-wider">Middle Initial</th>
-                <th class="p-4 text-left text-sm font-bold uppercase tracking-wider">Position</th>
-                <th class="p-4 text-left text-sm font-bold uppercase tracking-wider">Action</th>
+                <th>Last Name</th>
+                <th>First Name</th>
+                <th>M.I.</th>
+                <th>Position</th>
+                <th>Display Order</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($officials as $official)
-                <tr class="border-b border-gray-300">
-                    <td class="p-4 text-gray-800 font-medium border-r border-gray-300">{{ $official->last_name }}</td>
-                    <td class="p-4 text-gray-800 border-r border-gray-300">{{ $official->first_name }}</td>
-                    <td class="p-4 text-gray-800 border-r border-gray-300">{{ $official->middle_initial }}</td>
-                    <td class="p-4 text-gray-800 border-r border-gray-300">{{ $official->position }}</td>
-                    <td class="p-4">
-                        <div class="flex items-center gap-4">
-                            <button class="text-blue-600 hover:text-blue-800">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                            </button>
-                            <button class="text-green-600 hover:text-green-800">
-                               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg>
-                            </button>
-                            <button class="text-red-600 hover:text-red-800">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
+            <tr>
+                <td>{{ $official->last_name }}</td>
+                <td>{{ $official->first_name }}</td>
+                <td>{{ $official->middle_initial }}</td>
+                <td>{{ $official->position }}</td>
+                <td>{{ $official->display_order }}</td>
+                <td>
+                    <div class="col-actions">
+                        <button type="button" class="icon-btn icon-view" title="View" data-official='@json($official)'>
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                        <button type="button" class="icon-btn icon-edit edit-btn" title="Edit" data-official='@json($official)'>
+                            <i class="fa-regular fa-pen-to-square"></i>
+                        </button>
+                        <form action="{{ route('admin.officials.destroy', $official->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this official?');" style="display:inline;">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="icon-btn icon-del" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
             @empty
-                <tr class="border-b border-gray-300">
-                    <td colspan="5" class="p-4 text-center text-gray-500">No officials found.</td>
-                </tr>
+            <tr>
+                <td colspan="6" class="text-center py-4">No officials found.</td>
+            </tr>
             @endforelse
         </tbody>
     </table>
 </div>
+
+<!-- add/edit modal -->
+<div id="officialModal" class="exact-modal" aria-hidden="true" role="dialog">
+    <div class="exact-modal__overlay" data-close></div>
+    <div class="exact-modal__panel" role="document">
+        <div class="exact-modal__header">
+            <div class="flex items-center gap-3"><img src="{{ asset('img/barangaylogo.jpg') }}" alt="Logo" class="w-8 h-8 rounded-full object-cover">
+                <h3 id="modalTitle" class="exact-modal__title">Add Official</h3>
+            </div>
+            <button type="button" class="exact-modal__close" aria-label="Close" data-close><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="officialForm" method="POST" action="" enctype="multipart/form-data">
+            @csrf
+            <div id="method-field"></div>
+            <div class="exact-modal__body grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                <div class="md:col-span-1">
+                    <div class="photo-uploader">
+                        <img src="" id="photo-preview" class="photo-uploader__img hidden" alt="Photo Preview">
+                        <div id="photo-placeholder" class="photo-uploader__placeholder"><i class="fa-solid fa-camera"></i></div>
+                    </div>
+                    <label for="photo_path" class="photo-uploader__btn">Upload Photo</label>
+                    <input type="file" name="photo_path" id="photo_path" class="hidden" accept="image/*">
+                </div>
+                <div class="md:col-span-2 space-y-3">
+                    <div class="block"><label for="last_name" class="lbl">Last Name:</label><input type="text" name="last_name" id="last_name" class="input exact-input" required></div>
+                    <div class="block"><label for="first_name" class="lbl">First Name:</label><input type="text" name="first_name" id="first_name" class="input exact-input" required></div>
+                    <div class="block"><label for="middle_initial" class="lbl">Middle Initial:</label><input type="text" name="middle_initial" id="middle_initial" class="input exact-input"></div>
+                    <div class="block"><label for="position" class="lbl">Position:</label><input type="text" name="position" id="position" class="input exact-input" required></div>
+                    <div class="block"><label for="display_order" class="lbl">Display Order:</label><input type="number" name="display_order" id="display_order" class="input exact-input" required value="0"></div>
+                </div>
+            </div>
+            <div class="exact-modal__footer">
+                <button type="button" class="exact-btn exact-btn--cancel" data-close>CANCEL</button>
+                <button type="submit" id="modalSubmitButton" class="exact-btn exact-btn--add">ADD</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- view modal -->
+<div id="viewOfficialModal" class="exact-modal" aria-hidden="true" role="dialog">
+    <div class="exact-modal__overlay" data-close></div>
+    <div class="exact-modal__panel" role="document">
+        <div class="exact-modal__header">
+            <div class="flex items-center gap-3"><img src="{{ asset('img/barangaylogo.jpg') }}" alt="Logo" class="w-8 h-8 rounded-full object-cover">
+                <h3 class="exact-modal__title">View Official</h3>
+            </div>
+            <button type="button" class="exact-modal__close" aria-label="Close" data-close><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="exact-modal__body grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            <div class="md:col-span-1">
+                <div class="photo-uploader"><img id="view_photo" class="photo-uploader__img" alt="Official Photo"></div>
+            </div>
+            <div class="md:col-span-2 space-y-3">
+                <div class="block"><label class="lbl">Last Name:</label><input type="text" id="view_last_name" class="input exact-input" readonly></div>
+                <div class="block"><label class="lbl">First Name:</label><input type="text" id="view_first_name" class="input exact-input" readonly></div>
+                <div class="block"><label class="lbl">Middle Initial:</label><input type="text" id="view_middle_initial" class="input exact-input" readonly></div>
+                <div class="block"><label class="lbl">Position:</label><input type="text" id="view_position" class="input exact-input" readonly></div>
+            </div>
+        </div>
+        <div class="exact-modal__footer">
+            <button type="button" class="exact-btn exact-btn--cancel" data-close>CLOSE</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .exact-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .exact-modal.open {
+        display: flex;
+    }
+
+    .exact-modal__overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, .45);
+    }
+
+    .exact-modal__panel {
+        position: relative;
+        width: min(600px, 92%);
+        background: #f3ede5;
+        border-radius: 18px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+        border: 2px solid #101010;
+        overflow: hidden;
+    }
+
+    .exact-modal__header {
+        background: #2e658d;
+        color: #fff;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, .12);
+    }
+
+    .exact-modal__title {
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .exact-modal__close {
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        color: #fff;
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .exact-modal__body {
+        padding: 24px;
+    }
+
+    .exact-modal__body .block {
+        margin-bottom: 0;
+    }
+
+    .exact-modal__body .lbl {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .exact-modal__body .input {
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 10px 12px;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, .05) inset, 0 1px 2px rgba(0, 0, 0, .06);
+        outline: none;
+    }
+
+    .exact-modal__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 18px;
+        background: transparent;
+        border-top: 1px solid rgba(0, 0, 0, .08);
+    }
+
+    .exact-btn {
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-weight: 700;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+        cursor: pointer;
+    }
+
+    .exact-btn--cancel {
+        background: #b9c9d6;
+        color: #203544;
+    }
+
+    .exact-btn--add {
+        background: #2e9b58;
+        color: #fff;
+    }
+
+    .exact-btn:active {
+        transform: translateY(1px);
+    }
+
+    .photo-uploader {
+        width: 160px;
+        height: 160px;
+        margin: 0 auto;
+        background: #e9eef2;
+        border-radius: 16px;
+        border: 2px solid #a9c2d7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .photo-uploader__img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .photo-uploader__placeholder {
+        font-size: 48px;
+        color: #a9c2d7;
+    }
+
+    .photo-uploader__btn {
+        display: block;
+        width: 160px;
+        margin: 12px auto 0;
+        text-align: center;
+        padding: 8px 12px;
+        background: #a9c2d7;
+        color: #203544;
+        font-weight: 700;
+        border-radius: 999px;
+        cursor: pointer;
+    }
+</style>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        function lockScroll(lock) {
+            if (lock) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+
+        // ADD/EDIT MODAL 
+        const modal = document.getElementById('officialModal');
+        if (modal) {
+            const form = document.getElementById('officialForm');
+            const methodField = document.getElementById('method-field');
+            const submitBtn = document.getElementById('modalSubmitButton');
+            const modalTitle = document.getElementById('modalTitle');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const lastNameEl = document.getElementById('last_name');
+            const firstNameEl = document.getElementById('first_name');
+            const middleInitialEl = document.getElementById('middle_initial');
+            const positionEl = document.getElementById('position');
+            const displayOrderEl = document.getElementById('display_order');
+            const photoInput = document.getElementById('photo_path');
+            const photoPreview = document.getElementById('photo-preview');
+            const photoPlaceholder = document.getElementById('photo-placeholder');
+
+            const resetPhotoPreview = () => {
+                photoPreview.src = '';
+                photoPreview.classList.add('hidden');
+                photoPlaceholder.classList.remove('hidden');
+            };
+
+            const openModal = () => {
+                modal.classList.add('open');
+                lockScroll(true);
+                setTimeout(() => lastNameEl?.focus(), 10);
+            };
+            const closeModal = () => {
+                modal.classList.remove('open');
+                lockScroll(false);
+                form?.reset();
+                resetPhotoPreview();
+            };
+
+            window.openAddModal = () => {
+                form.reset();
+                form.action = "{{ route('admin.officials.store') }}";
+                methodField.innerHTML = "";
+                modalTitle.textContent = "Add Official";
+                submitBtn.textContent = "ADD";
+                resetPhotoPreview();
+                openModal();
+            };
+            window.openEditModal = (btn) => {
+                const o = JSON.parse(btn.dataset.official);
+                form.reset();
+                form.action = `/admin/officials/${o.id}`;
+                methodField.innerHTML = `<input type="hidden" name="_method" value="PUT">`;
+                modalTitle.textContent = "Edit Official";
+                submitBtn.textContent = "SAVE";
+                lastNameEl.value = o.last_name || '';
+                firstNameEl.value = o.first_name || '';
+                middleInitialEl.value = o.middle_initial || '';
+                positionEl.value = o.position || '';
+                displayOrderEl.value = o.display_order || 0;
+                if (o.photo_path) {
+                    photoPreview.src = `/storage/${o.photo_path}`;
+                    photoPreview.classList.remove('hidden');
+                    photoPlaceholder.classList.add('hidden');
+                } else {
+                    resetPhotoPreview();
+                }
+                openModal();
+            };
+
+            photoInput.addEventListener('change', () => {
+                const file = photoInput.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        photoPreview.src = e.target.result;
+                        photoPreview.classList.remove('hidden');
+                        photoPlaceholder.classList.add('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    resetPhotoPreview();
+                }
+            });
+
+            form.addEventListener('submit', async e => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                try {
+                    const res = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+                    if (res.ok) {
+                        location.reload();
+                    } else if (res.status === 422) {
+                        const data = await res.json();
+                        let msg = 'Please fix:\n';
+                        for (const k in data.errors) {
+                            msg += `- ${data.errors[k].join(', ')}\n`;
+                        }
+                        alert(msg);
+                    } else {
+                        throw new Error('Server error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('An error occurred.');
+                }
+            });
+        }
+
+        // VIEW MODAL
+        const viewModal = document.getElementById('viewOfficialModal');
+        if (viewModal) {
+            const viewLastName = document.getElementById('view_last_name');
+            const viewFirstName = document.getElementById('view_first_name');
+            const viewMiddleInitial = document.getElementById('view_middle_initial');
+            const viewPosition = document.getElementById('view_position');
+            const viewPhoto = document.getElementById('view_photo');
+            window.openViewModal = (btn) => {
+                const o = JSON.parse(btn.dataset.official);
+                viewLastName.value = o.last_name || '';
+                viewFirstName.value = o.first_name || '';
+                viewMiddleInitial.value = o.middle_initial || '';
+                viewPosition.value = o.position || '';
+                viewPhoto.src = o.photo_path ? `/storage/${o.photo_path}` : '/img/kagawad-placeholder.jpg';
+                viewModal.classList.add('open');
+                lockScroll(true);
+            };
+        }
+
+        // GLOBAL HANDLERS
+        document.addEventListener('click', e => {
+            const addBtn = e.target.closest('#addOfficialBtn');
+            const editBtn = e.target.closest('.edit-btn');
+            const viewBtn = e.target.closest('.icon-view');
+            const closeBtn = e.target.closest('[data-close]');
+
+            if (addBtn) {
+                window.openAddModal();
+            } else if (editBtn) {
+                window.openEditModal(editBtn);
+            } else if (viewBtn) {
+                window.openViewModal(viewBtn);
+            } else if (closeBtn) {
+                const m = closeBtn.closest('.exact-modal');
+                if (m) {
+                    m.classList.remove('open');
+                    lockScroll(false);
+                    if (m.id === 'officialModal') {
+                        m.querySelector('form')?.reset();
+                        document.getElementById('photo-preview').src = '';
+                        document.getElementById('photo-preview').classList.add('hidden');
+                        document.getElementById('photo-placeholder').classList.remove('hidden');
+                    }
+                }
+            }
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                const m = document.querySelector('.exact-modal.open');
+                if (m) {
+                    m.classList.remove('open');
+                    lockScroll(false);
+                    if (m.id === 'officialModal') {
+                        m.querySelector('form')?.reset();
+                        document.getElementById('photo-preview').src = '';
+                        document.getElementById('photo-preview').classList.add('hidden');
+                        document.getElementById('photo-placeholder').classList.remove('hidden');
+                    }
+                }
+            }
+        });
+    });
+</script>
+@endpush
+======================================================================
+File: resources/views/admin/users/create.blade.php
+======================================================================
+
+@extends('layouts.admin')
+
+@section('title', 'Add User')
+
+@section('content')
+<h2 class="text-2xl font-bold mb-6">Add New User</h2>
+<div class="bg-white p-8 rounded-lg shadow-md">
+    <p class="text-gray-600">This feature is currently under development.</p>
+    <div class="mt-6 flex justify-end">
+        <a href="{{ route('admin.users.index') }}" class="btn btn-ghost">Back to User List</a>
+    </div>
+</div>
+@endsection
+======================================================================
+File: resources/views/admin/users/index.blade.php
+======================================================================
+
+@extends('layouts.admin')
+
+@section('title', 'User Management')
+
+@section('content')
+<div class="page-head">
+    <div class="page-title">USERS</div>
+</div>
+
+<div class="flex justify-end items-center mb-6">
+    <a href="{{ route('admin.users.create') }}" class="primary-btn">
+        <span>ADD USER</span><i class="fa-solid fa-circle-plus"></i>
+    </a>
+</div>
+
+<div class="card table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Date Registered</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($users as $user)
+            <tr>
+                <td>{{ $user->name }}</td>
+                <td>{{ $user->email }}</td>
+                <td>{{ $user->created_at->format('m/d/Y') }}</td>
+                <td>
+                    <div class="col-actions">
+                        <a href="{{ route('admin.users.show', $user) }}" class="icon-btn icon-view" title="View">
+                            <i class="fa-regular fa-eye"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="4" class="text-center py-4">No users found. (Feature is under development)</td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
+@if ($users->hasPages())
+<div class="flex justify-end pt-4">
+    {{ $users->links() }}
+</div>
+@endif
+@endsection
+======================================================================
+File: resources/views/admin/users/show.blade.php
+======================================================================
+
+@extends('layouts.admin')
+
+@section('title', 'View User')
+
+@section('content')
+<h2 class="text-2xl font-bold mb-6">View User Details</h2>
+<div class="bg-white p-8 rounded-lg shadow-md">
+    <p class="text-gray-600">This feature is currently under development.</p>
+    <div class="mt-6 flex justify-end">
+        <a href="{{ route('admin.users.index') }}" class="btn btn-ghost">Back to User List</a>
+    </div>
+</div>
+@endsection
+======================================================================
+File: resources/views/announcements/show.blade.php
+======================================================================
+
+@extends('layouts.app')
+
+@section('title', $announcement->title)
+
+@section('content')
+
+<x-public.navbar />
+
+<div class="bg-base-100 py-16 px-4 sm:px-8">
+    <div class="container mx-auto max-w-4xl">
+
+        <div class="text-center mb-12">
+            @php
+                $displayDate = $announcement->start_date ? \Carbon\Carbon::parse($announcement->start_date) : $announcement->created_at;
+            @endphp
+            <p class="text-lg font-semibold text-blue-800">{{ $displayDate->format('F d, Y') }}</p>
+            <h1 class="text-4xl sm:text-5xl font-bold text-slate-800 mt-2">{{ $announcement->title }}</h1>
+        </div>
+
+        <div class="prose max-w-none text-lg text-slate-700 leading-relaxed text-justify">
+            <p>
+                {!! nl2br(e($announcement->content)) !!}
+            </p>
+        </div>
+
+        <div class="text-center mt-16">
+            <a href="{{ url('/#announcements') }}" class="btn btn-outline btn-primary">
+                &larr; Back to All Announcements
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<x-public.footer />
+
+@endsection
+======================================================================
+File: resources/views/components/modal.php
+======================================================================
+
+@props([
+'id' => 'appModal',
+'title' => 'Modal Title',
+'action' => '#',
+'submitLabel' => 'SAVE',
+])
+
+<div id="{{ $id }}" class="app-modal" aria-hidden="true" role="dialog">
+    <div class="app-modal__overlay" data-modal-close></div>
+
+    <div class="app-modal__panel" role="document" aria-labelledby="{{ $id }}-title">
+        <div class="app-modal__header">
+            <div class="flex items-center gap-3">
+                <img src="{{ asset('img/barangaylogo.jpg') }}" alt="Logo" class="w-8 h-8 rounded-full object-cover">
+                <h3 id="{{ $id }}-title" class="app-modal__title">{{ $title }}</h3>
+            </div>
+            <button type="button" class="app-modal__close" aria-label="Close" data-modal-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="{{ $id }}-form" method="POST" action="{{ $action }}" enctype="multipart/form-data">
+            @csrf
+            <div id="{{ $id }}-method-field"></div>
+
+            <div class="app-modal__body">
+                {{ $slot }}
+            </div>
+
+            <div class="app-modal__footer">
+                <button type="button" class="app-btn app-btn--cancel" data-modal-close>CANCEL</button>
+                <button type="submit" id="{{ $id }}-submit-btn" class="app-btn app-btn--primary">{{ $submitLabel }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@once
+<style>
+    :root {
+        --modal-header: #2e658d;
+        --modal-body: #f3ede5;
+        --modal-border: #101010;
+        --btn-cancel: #b9c9d6;
+        --btn-cancel-text: #203544;
+        --btn-primary: #2e9b58;
+        --btn-primary-text: #0d1e11;
+        --field-bg: #ffffff;
+        --field-border: #e5e7eb;
+        --field-shadow: 0 1px 0 rgba(0, 0, 0, .05) inset, 0 1px 2px rgba(0, 0, 0, .06);
+    }
+
+    .app-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 9999;
+    }
+
+    .app-modal.open {
+        display: block;
+    }
+
+    .app-modal__overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, .45);
+    }
+
+    .app-modal__panel {
+        position: relative;
+        margin: 4vh auto;
+        width: min(520px, 92%);
+        background: var(--modal-body);
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+        border: 2px solid var(--modal-border);
+    }
+
+    .app-modal__header {
+        background: var(--modal-header);
+        color: #fff;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, .12);
+    }
+
+    .app-modal__title {
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .app-modal__close {
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        color: #fff;
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .app-modal__body {
+        padding: 16px 18px 8px;
+    }
+
+    .app-modal__body .block {
+        margin-bottom: 1rem;
+    }
+
+    .app-modal__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 18px;
+        border-top: 1px solid rgba(0, 0, 0, .08);
+        background: transparent;
+    }
+
+    .lbl {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .app-input,
+    .app-textarea {
+        width: 100%;
+        background: var(--field-bg);
+        border: 1px solid var(--field-border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        box-shadow: var(--field-shadow);
+        outline: none;
+    }
+
+    .app-textarea {
+        min-height: 110px;
+        resize: vertical;
+    }
+
+    .app-btn {
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-weight: 700;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+        cursor: pointer;
+    }
+
+    .app-btn--cancel {
+        background: var(--btn-cancel);
+        color: var(--btn-cancel-text);
+    }
+
+    .app-btn--primary {
+        background: var(--btn-primary);
+        color: var(--btn-primary-text);
+    }
+
+    .app-btn:active {
+        transform: translateY(1px);
+    }
+
+    .app-date__wrap {
+        position: relative;
+    }
+
+    .app-date__icon {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #eef0f2;
+        border: 1px solid #cfd6dc;
+        border-radius: 6px;
+        width: 34px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        color: #5b6670;
+    }
+</style>
+
+@push('scripts')
+<script>
+    (function() {
+        function lockBody(lock) {
+            if (lock) {
+                document.body.dataset.prevOverflow = document.body.style.overflow || '';
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = document.body.dataset.prevOverflow || '';
+                delete document.body.dataset.prevOverflow;
+            }
+        }
+        document.addEventListener('click', function(e) {
+            const openBtn = e.target.closest('[data-modal-open]');
+            if (openBtn) {
+                const sel = openBtn.getAttribute('data-modal-open');
+                const modal = document.querySelector(sel);
+                if (modal) {
+                    modal.classList.add('open');
+                    modal.setAttribute('aria-hidden', 'false');
+                    lockBody(true);
+                    const first = modal.querySelector('input, textarea, select, button');
+                    first && first.focus();
+                }
+            }
+            const closeBtn = e.target.closest('[data-modal-close]');
+            if (closeBtn) {
+                const modal = closeBtn.closest('.app-modal');
+                if (modal) {
+                    const form = modal.querySelector('form');
+                    form && form.reset();
+                    modal.classList.remove('open');
+                    modal.setAttribute('aria-hidden', 'true');
+                    lockBody(false);
+                }
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const open = document.querySelector('.app-modal.open');
+                if (open) {
+                    const form = open.querySelector('form');
+                    form && form.reset();
+                    open.classList.remove('open');
+                    open.setAttribute('aria-hidden', 'true');
+                    lockBody(false);
+                }
+            }
+        });
+    })();
+</script>
+@endpush
+@endonce
 ======================================================================
 File: resources/views/components/public/about.blade.php
 ======================================================================
 
-<div class="bg-base-100 py-16 px-4 sm:px-8">
-    {{-- FIX: Increased max-width from 5xl to 7xl for more horizontal space --}}
+<div id="about" class="bg-base-100 py-16 px-4 sm:px-8">
     <div class="container mx-auto max-w-7xl">
+
 
         <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12">ABOUT US</h2>
 
-        {{-- FIX: Added text-sm and leading-relaxed to reduce font size and improve line spacing --}}
+
         <div class="prose max-w-none font-serif text-justify mb-12">
             <p class="text-l leading-relaxed">
                 Barangay Daang Bakal was named after the Rail Road of the Philippine National Railway (PNR) based on the ancient people. It is one of the Barangays included in District 1 by Local Political Division.
             </p>
             <p class="text-l leading-relaxed"> <br>
                 The Official Logo of the Barangay has the following features: the PNR Rail Road where the name Daang Bakal came, it was the path from Manila to Bicol Provinces and vice versa. The Bravo 9 is used because Daang Bakal is the 9th Barangay in the City of Mandaluyong when alphabetically arranged.
+
 
             </p>
             <p class="text-l leading-relaxed"><br>
@@ -2927,6 +3764,7 @@ File: resources/views/components/public/about.blade.php
                 Barangay Daang Bakal Hall is located at 553-J. Vicente Fabella Street; it is at the back of Jose Rizal University Elementary Building. Though we started small, our beginning was like a toll gate beside Sevilla Bridge in Shaw Boulevard but with the grace of God we are now occupying 1, 168.5sq.mts. with 255 sq.mts. roof Deck Area and 646 sq. mts. open space. It was turnover by City Mayor Menchie Abalos and former Benhur Abalos on July 18, 2018.
             </p>
         </div>
+
 
         <div class="grid grid-cols-1 text-center md:grid-cols-2 gap-10 mb-16">
             <div>
@@ -2943,6 +3781,7 @@ File: resources/views/components/public/about.blade.php
             </div>
         </div>
 
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="rounded-lg shadow-lg h-[450px] flex items-center justify-center overflow-hidden">
                 <img src="/img/kap1.jpg" alt="Award Poster 1" class="max-w-full max-h-full object-contain">
@@ -2952,56 +3791,36 @@ File: resources/views/components/public/about.blade.php
             </div>
         </div>
 
+
     </div>
 </div>
+
 
 <style>
     .font-serif {
         font-family: 'Georgia', 'Times New Roman', serif;
     }
 </style>
+
 ======================================================================
 File: resources/views/components/public/announcement-ticker.blade.php
 ======================================================================
 
 @php
-    $announcements = [
-        (object)[
-            'title' => 'MAGANDANG UMAGA, DAANG BAKAL!',
-            'content' => 'Mag-ingat po sa umuusong sakit na Influenza (Trangkaso). Ugaliing maghugas ng kamay, uminom ng maraming tubig, at magsuot ng face mask kung kinakailangan.'
-        ],
-        (object)[
-            'title' => 'GUSTO MO BA MAG TUPAD?',
-            'content' => 'Tara na, kabarangay! Isa itong magandang pagkakataon para sa karagdagang hanapbuhay at tulong mula sa pamahalaan.'
-        ],
-        (object)[
-            'title' => 'TARA, BASA TAYO!',
-            'content' => 'Alam niyo ba? May Mini Library tayo sa 2nd Floor ng Barangay Daang Bakal Hall! Bukas ito para sa lahat ng estudyante at residente ng Barangay Daang Bakal.'
-        ],
-         (object)[
-            'date' => '2025-10-10',
-            'title' => 'WORLD HEALTH DAY',
-            'content' => 'Nakikiisa ang Barangay Daang Bakal sa pagdiriwang ng World Mental Health Day! Tandaan -- ang kalusugang pang-isipan ay kasinghalaga ng kalusugang pisikal.'
-        ],
-          (object)[
-            'date' => '2025-10-07',
-            'title' => 'REHAB REFERRAL DESK',
-            'content' => 'Isa sa mga serbisyong hatid ng Barangay Daang Bakal ay ang Rehab Referral Desk, na naglalayong tulungan ang ating mga kabaranggay na nangangalingan ng gabay.'
-        ],
-    ];
-
-    // Automatically create the ticker string by joining all the announcement titles.
-    $tickerText = collect($announcements)->pluck('title')->implode(' — ');
+$tickerText = "MAGANDANG UMAGA, DAANG BAKAL! — GUSTO MO BA MAG TUPAD? — TARA, BASA TAYO! — WORLD HEALTH DAY — REHAB REFERRAL DESK";
 @endphp
 
-<div class=" text-gray-800 p-2 flex items-center text-sm overflow-hidden">
+
+<div class="text-gray-800 p-2 flex items-center text-sm overflow-hidden border-b border-gray-200">
   <span class="font-bold bg-[#134573] text-white py-1 px-3 rounded-md mr-4 flex-shrink-0">
     Latest Announcements:
   </span>
 
+
   <div class="marquee-container flex-1 bg-[#134573] text-yellow-300 rounded-md h-8 relative overflow-hidden">
     <div class="marquee-track absolute inset-0 flex items-center whitespace-nowrap">
-      
+
+
       <span class="px-4">
         {{ $tickerText }}
       </span>
@@ -3012,25 +3831,31 @@ File: resources/views/components/public/announcement-ticker.blade.php
   </div>
 </div>
 
+
 <style>
+  /* Custom CSS for the marquee effect */
   .marquee-track {
     animation: ticker 20s linear infinite;
   }
 
+
   .marquee-container:hover .marquee-track {
     animation-play-state: paused;
   }
+
 
   @keyframes ticker {
     0% {
       transform: translateX(0);
     }
 
+
     100% {
       transform: translateX(-50%);
     }
   }
 </style>
+
 ======================================================================
 File: resources/views/components/public/announcements-list.blade.php
 ======================================================================
@@ -3038,10 +3863,14 @@ File: resources/views/components/public/announcements-list.blade.php
 <div id="announcements" class="bg-base-100 py-16 px-4 sm:px-8">
     <div class="container mx-auto max-w-6xl">
 
+
         <h2 class="text-4xl sm:text-4xl font-bold text-center mb-8">ANNOUNCEMENTS</h2>
 
+
         <div class="max-w-6xl mx-auto px-5 flex flex-row gap-4 items-center">
+            {{-- Assuming this image is available in public/img/ --}}
             <img src="{{ asset('/img/announcement.png') }}" alt="Announcement Icon" class="h-15 w-15 mr-2">
+
 
             <div class="form-control w-full">
                 <label class="relative block w-full">
@@ -3053,49 +3882,149 @@ File: resources/views/components/public/announcements-list.blade.php
                                 d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                         </svg>
                     </span>
+                    {{-- Static Search Input --}}
                     <input type="text" name="q" placeholder="Search announcements..."
                         class="input input-bordered w-full bg-transparent pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-300" />
                 </label>
             </div>
         </div>
 
+
         <div class="max-w-6xl mx-auto mt-6 px-5">
             <a href="#"
                 class="inline-block border-b-2 border-blue-800 text-blue-800 font-bold text-sm tracking-wider pb-1 px-2 rounded-t-md hover:bg-blue-50 transition-colors">ALL</a>
         </div>
 
+
         <div class="space-y-1 max-w-6xl mx-auto mt-4">
 
-            @forelse($announcements as $announcement)
-                <a href="{{ route('announcements.show', $announcement) }}" class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
-                    <div class="flex items-start space-x-6">
-                        @php
-                            $displayDate = $announcement->start_date ? \Carbon\Carbon::parse($announcement->start_date) : $announcement->created_at;
-                        @endphp
-                        <div class="text-center flex-shrink-0 w-20">
-                            <p class="text-xl font-bold text-blue-800">{{ $displayDate->format('M') }}</p>
-                            <p class="text-2xl font-bold">{{ $displayDate->format('d') }}</p>
-                        </div>
-                        <div class="border-l-2 border-gray-300 pl-6">
-                            <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">{{ $announcement->title }}</h3>
-                            <div class="flex items-center text-sm text-gray-500 mt-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
-                                    fill="currentColor">
-                                    <path fill-rule="evenodd"
-                                        d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Posted on: {{ $displayDate->format('F d, Y') }}</span>
-                            </div>
-                            <p class="mt-2 text-slate-600">{{ Str::limit($announcement->content, 150) }}</p>
-                        </div>
+
+            {{-- STATICALLY RENDERED ANNOUNCEMENT BLOCKS (Matching the visual style) --}}
+
+            {{-- Announcement 1: OCT 21 --}}
+            <div class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
+                <div class="flex items-start space-x-6">
+                    <div class="text-center flex-shrink-0 w-20">
+                        <p class="text-xl font-bold text-blue-800">OCT</p>
+                        <p class="text-2xl font-bold">21</p>
                     </div>
-                </a>
-            @empty
-                <div class="text-center py-10 text-gray-500">
-                    <p>No active announcements found.</p>
+                    <div class="border-l-2 border-gray-300 pl-6">
+                        <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">MAGANDANG UMAGA, DAANG
+                            BAKAL!</h3>
+                        <div class="flex items-center text-sm text-gray-500 mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Posted on: October 21, 2025</span>
+                        </div>
+                        <p class="mt-2 text-slate-600">Mag-ingat po sa umuusong sakit na Influenza (Trangkaso). Ugaliing
+                            maghugas ng kamay, uminom ng maraming tubig, at magsuot ng face mask kung kinakailangan.</p>
+                    </div>
                 </div>
-            @endforelse
+            </div>
+
+
+            {{-- Announcement 2: OCT 17 --}}
+            <div class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
+                <div class="flex items-start space-x-6">
+                    <div class="text-center flex-shrink-0 w-20">
+                        <p class="text-xl font-bold text-blue-800">OCT</p>
+                        <p class="text-2xl font-bold">17</p>
+                    </div>
+                    <div class="border-l-2 border-gray-300 pl-6">
+                        <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">GUSTO MO BA MAG TUPAD?</h3>
+                        <div class="flex items-center text-sm text-gray-500 mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Posted on: October 17, 2025</span>
+                        </div>
+                        <p class="mt-2 text-slate-600">Tara na, kabarangay! Isa itong magandang pagkakataon para sa
+                            karagdagang hanapbuhay at tulong mula sa pamahalaan.</p>
+                    </div>
+                </div>
+            </div>
+
+
+            {{-- Announcement 3: OCT 13 --}}
+            <div class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
+                <div class="flex items-start space-x-6">
+                    <div class="text-center flex-shrink-0 w-20">
+                        <p class="text-xl font-bold text-blue-800">OCT</p>
+                        <p class="text-2xl font-bold">13</p>
+                    </div>
+                    <div class="border-l-2 border-gray-300 pl-6">
+                        <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">TARA, BASA TAYO!</h3>
+                        <div class="flex items-center text-sm text-gray-500 mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Posted on: October 13, 2025</span>
+                        </div>
+                        <p class="mt-2 text-slate-600">Alam niyo ba? May Mini Library tayo sa 2nd Floor ng Barangay
+                            Daang Bakal Hall! Bukas ito para sa lahat ng estudyante at residente ng Barangay Daang
+                            Bakal.</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Announcement 4: OCT 10 --}}
+            <div class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
+                <div class="flex items-start space-x-6">
+                    <div class="text-center flex-shrink-0 w-20">
+                        <p class="text-xl font-bold text-blue-800">OCT</p>
+                        <p class="text-2xl font-bold">10</p>
+                    </div>
+                    <div class="border-l-2 border-gray-300 pl-6">
+                        <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">WORLD HEALTH DAY</h3>
+                        <div class="flex items-center text-sm text-gray-500 mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Posted on: October 10, 2025</span>
+                        </div>
+                        <p class="mt-2 text-slate-600">Nakikiisa ang Barangay Daang Bakal sa pagdiriwang ng World Mental
+                            Health Day! Tandaan -- ang kalusugang pang-isipan ay kasinghalaga ng kalusugang pisikal.</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Announcement 5: OCT 07 --}}
+            <div class="block p-4 pl-0 rounded-lg hover:bg-base-200 transition-colors duration-200">
+                <div class="flex items-start space-x-6">
+                    <div class="text-center flex-shrink-0 w-20">
+                        <p class="text-xl font-bold text-blue-800">OCT</p>
+                        <p class="text-2xl font-bold">07</p>
+                    </div>
+                    <div class="border-l-2 border-gray-300 pl-6">
+                        <h3 class="font-bold text-lg uppercase tracking-wide text-slate-800">REHAB REFERRAL DESK</h3>
+                        <div class="flex items-center text-sm text-gray-500 mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Posted on: October 07, 2025</span>
+                        </div>
+                        <p class="mt-2 text-slate-600">Isa sa mga serbisyong hatid ng Barangay Daang Bakal ay ang Rehab
+                            Referral Desk, na naglalayong tulungan ang ating mga kabaranggay na nangangalingan ng gabay.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             <p class="text-center pt-8 max-w-4xl mx-auto">
                 Para sa karagdagang mga update, bisitahin lamang ang Opisyal na Facebook Page ng Barangay Daang Bakal!
@@ -3107,164 +4036,252 @@ File: resources/views/components/public/announcements-list.blade.php
 File: resources/views/components/public/faq.blade.php
 ======================================================================
 
-<!doctype html>
-<html lang="en" data-theme="light">
+{{-- Final FAQ Chatbot Component --}}
 
-<body class="min-h-screen bg-base-200">
 
-  <button id="faq-toggle"
-    class="fixed z-50 right-[calc(1rem+env(safe-area-inset-right))]
-                   bottom-[calc(1rem+env(safe-area-inset-bottom))]
-                   size-16 rounded-full grid place-items-center
-                   bg-primary text-primary-content shadow-2xl
-                   ring-2 ring-white hover:scale-[1.03] active:scale-95 transition"
-    aria-controls="faq-chat" aria-expanded="false" aria-label="Open FAQ chat">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-         class="w-7 h-7" fill="currentColor">
-      <path d="M7 7h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.6l-3.2 2.4A1 1 0 0 1 5 18.5V9a2 2 0 0 1 2-2z"/>
-    </svg>
-    <span id="faq-dot" class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-error ring-2 ring-white"></span>
-  </button>
+<button id="faq-toggle" class="fixed z-50 right-4 bottom-4 size-12 rounded-full grid place-items-center
+          bg-[#232c54] text-white shadow-2xl
+         ring-2 ring-white hover:scale-105 active:scale-95 transition-transform" aria-controls="faq-chat"
+  aria-expanded="false" aria-label="Open FAQ chat">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-7 h-7" fill="currentColor">
+    <path d="M7 7h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9.6l-3.2 2.4A1 1 0 0 1 5 18.5V9a2 2 0 0 1 2-2z" />
+  </svg>
+  <span id="faq-dot" class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-error ring-2 ring-white"></span>
+</button>
 
-  <section id="faq-chat"
-    class="fixed w-80 h-[30rem] right-[calc(1rem+env(safe-area-inset-right))]
-           bottom-[calc(5.5rem+env(safe-area-inset-bottom))]
-           bg-base-100 rounded-2xl shadow-2xl border border-base-300
-           flex flex-col translate-y-4 opacity-0 pointer-events-none
-           transition-all duration-300 ease-out"
-    role="dialog" aria-modal="true" aria-labelledby="faq-title">
-    <header class="px-4 py-3 rounded-t-2xl bg-primary text-primary-content flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="inline-block w-2.5 h-2.5 bg-success rounded-full"></span>
-        <h3 id="faq-title" class="font-semibold">Frequently Asked Questions</h3>
+
+<section id="faq-chat" class="fixed w-80 h-[30rem] right-4 bottom-20
+         bg-base-100 rounded-2xl shadow-2xl border border-base-300
+         flex flex-col opacity-0 pointer-events-none
+         transition-all duration-300 ease-out" role="dialog" aria-modal="true" aria-labelledby="faq-title">
+
+
+  {{-- UPDATED HEADER --}}
+  <header class="px-4 py-3 rounded-t-2xl bg-[#134573CC] text-white flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2.5 h-2.5 bg-success rounded-full"></span>
+      <h3 id="faq-title" class="font-semibold">Frequently Asked Questions</h3>
+    </div>
+    <button id="faq-close" class="btn btn-ghost btn-sm btn-circle text-white" aria-label="Close">✕</button>
+  </header>
+
+
+  <div id="faq-body" class="flex-1 overflow-y-auto p-4 space-y-3">
+    <div class="chat chat-start">
+      <div class="chat-image avatar">
+        <div class="w-8 rounded-full"><img src="https://api.dicebear.com/8.x/thumbs/svg?seed=Bot" alt="Assistant"></div>
       </div>
-      <button id="faq-close" class="btn btn-ghost btn-sm btn-circle text-primary-content" aria-label="Close">✕</button>
-    </header>
-
-    <div id="faq-body" class="flex-1 overflow-y-auto p-4 space-y-3">
-      <div class="chat chat-start">
-        <div class="chat-image avatar">
-          <div class="w-8 rounded-full">
-            <img src="https://api.dicebear.com/8.x/thumbs/svg?seed=Bot" alt="Assistant">
-          </div>
-        </div>
-        <div class="chat-bubble bg-base-200 text-base-content">
-          Hello! How can I help you today? Select a question below or type your own.
-        </div>
+      <div class="chat-bubble bg-base-200 text-base-content">Hello! Type a question or select one of the topics below.
       </div>
     </div>
+  </div>
 
-    <div class="border-t border-base-300 p-3">
-      <div class="form-control">
-        <label class="input input-bordered flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 21l-4.35-4.35M16.65 10.5a6.15 6.15 0 11-12.3 0 6.15 6.15 0 0112.3 0z"/>
-          </svg>
-          <input id="faq-input" type="text" placeholder="Type a question… (Enter to send)" class="grow" autocomplete="off">
-        </label>
-      </div>
-      <div id="faq-chipwrap" class="mt-3 max-h-24 overflow-y-auto flex flex-wrap gap-2"></div>
+
+  <div class="border-t border-base-300 p-3 space-y-3">
+    <div class="form-control">
+      <input id="faq-input" type="text" placeholder="Type to filter questions..."
+        class="input input-sm input-bordered w-full" autocomplete="off" />
     </div>
-  </section>
+    <div id="faq-chipwrap" class="max-h-24 overflow-y-auto flex flex-wrap gap-2"></div>
+  </div>
+</section>
 
-  <style>
-    #faq-chat.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .chat-end .chat-image { margin-right: -6px; align-self: flex-end; }
-  </style>
 
-  <script>
-    
+<style>
+  #faq-chat {
+    transform: translateY(1rem);
+  }
+
+
+  #faq-chat.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+</style>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // --- 1. DEFINE YOUR QUESTIONS AND ANSWERS ---
     const FAQS = [
-      { q: "How do I register for an account?", a: "Go to Login → Register. Fill in your details and upload a valid ID (students may use school ID). Wait for admin approval." },
-      { q: "What documents can I request online?", a: "You can request: \n• Barangay Clearance\n• Barangay Certificate\n• Indigency Clearance\n• Resident Certificate" },
-      { q: "How can I request a document?", a: "After logging in, go to Requests → Choose document type → Complete the form → Submit." },
-      { q: "How will I know if my document is ready?", a: "You will receive an in-site notification and/or email. You can also track status under Profile → Requests." },
-      { q: "What should I bring when claiming my document?", a: "Bring a valid ID and your reference code/tracking number." },
-      { q: "Can I file a complaint online?", a: "Yes. Go to Complaints → File Complaint. Provide details and attachments if available." },
-      { q: "What are the barangay’s working hours?", a: "Monday–Friday, 8:00 AM–5:00 PM (excluding holidays). The online system is accessible 24/7." },
-      { q: "What are the barangay’s curfew hours?", a: "10:00 PM–4:00 AM, unless otherwise announced." }
+      {
+        q: "How do I register?",
+        a: "Visit the official Barangay Information System link: https://Baris.com. Residents can register online by filling out the registration form. If you experience any difficulty using the system, you may visit the barangay office, where the staff will assist you with the registration process and just bring valid id for verification.",
+        keywords: ["account", "sign up", "join", "new user"]
+      },
+      {
+        q: "What types of documents can I request online?",
+        a: "You can request: Barangay Clearance, Barangay Certificate, Indigency Clearance, and Resident Certificate.",
+        keywords: ["papers", "forms", "available", "list"]
+      },
+      {
+        q: "How can I request a document?",
+        a: "Once registered, log in to your account and go to the Homepage. Click the Request Document button, choose the type of document you need, fill out the required details, and submit your request for processing.",
+        keywords: ["apply", "get", "obtain", "process"]
+      },
+      {
+        q: "How will I know if my requested document is ready for pickup?",
+        a: "After submitting your request, the processing time is typically within 24 hours. You will receive a notification or email once your document is ready for pickup at the barangay office.",
+        keywords: ["status", "track", "check", "notification", "ready"]
+      },
+      {
+        q: "What should I bring when claiming my document?",
+        a: "Please bring a valid ID or provide your reference code number as proof of tracking number when claiming your document.",
+        keywords: ["claim", "collect", "requirements", "id"]
+      },
+      {
+        q: "Can I file a complaint online?",
+        a: "Yes. Log in to your account, navigate to the Homepage, and click the Submit Complaint button. You can then write and submit your complaint directly through the system.",
+        keywords: ["report", "issue", "blotter", "concern"]
+      },
+      {
+        q: "What are the barangay’s working hours?",
+        a: "The barangay office is open from Monday to Friday, 8:00 AM to 5:00 PM, excluding holidays. For online transactions, the system is accessible 24/7 for residents’ convenience.",
+        keywords: ["office hours", "schedule", "open", "close", "time"] // <-- KEYWORD ADDED
+      },
+      {
+        q: "What are the barangay’s curfew hours?",
+        a: "The official curfew hours are from 10:00 PM to 4:00 AM, unless otherwise adjusted by barangay announcements or local ordinances. Residents are encouraged to stay indoors during these hours for safety and community order.",
+        keywords: ["late", "night", "restrictions", "time"] // <-- KEYWORD ADDED
+      }
     ];
 
-    const $ = s => document.querySelector(s);
-    const chat = $('#faq-chat'), body = $('#faq-body'), input = $('#faq-input');
-    const chips = $('#faq-chipwrap'), toggle = $('#faq-toggle'), closeB = $('#faq-close'), dot = $('#faq-dot');
 
-    const nl2br = s => (s || '').replace(/\n/g, '<br>');
-    const scrollBottom = () => (body.scrollTop = body.scrollHeight);
-    const bubble = (msg, who='bot') => {
-      const wrap = document.createElement('div');
-      wrap.className = `chat ${who === 'user' ? 'chat-end' : 'chat-start'}`;
+    // --- 2. GET THE HTML ELEMENTS ---
+    const faqToggleBtn = document.getElementById('faq-toggle');
+    const faqCloseBtn = document.getElementById('faq-close');
+    const faqChatWindow = document.getElementById('faq-chat');
+    const faqBody = document.getElementById('faq-body');
+    const faqChipsContainer = document.getElementById('faq-chipwrap');
+    const faqInput = document.getElementById('faq-input');
+    const faqNotificationDot = document.getElementById('faq-dot');
 
-      const imgWrap = document.createElement('div');
-      imgWrap.className = 'chat-image avatar';
-      const box = document.createElement('div'); box.className = 'w-8 rounded-full';
-      const img = document.createElement('img');
-      img.alt = who === 'user' ? 'You' : 'Assistant';
-      img.src = who === 'user' ? 'https://api.dicebear.com/8.x/thumbs/svg?seed=You' : 'https://api.dicebear.com/8.x/thumbs/svg?seed=Bot';
-      box.appendChild(img); imgWrap.appendChild(box); wrap.appendChild(imgWrap);
 
-      const b = document.createElement('div');
-      b.className = who === 'user'
-        ? 'chat-bubble chat-bubble-primary text-primary-content max-w-[85%]'
-        : 'chat-bubble bg-base-200 text-base-content max-w-[85%]';
-      b.innerHTML = nl2br(msg);
-      wrap.appendChild(b);
+    // --- 3. HELPER FUNCTIONS ---
 
-      body.appendChild(wrap); scrollBottom();
-    };
-    const open = () => { chat.classList.add('is-open'); toggle.setAttribute('aria-expanded', 'true'); dot?.classList.add('hidden'); setTimeout(() => input.focus(), 60); };
-    const close = () => { chat.classList.remove('is-open'); toggle.setAttribute('aria-expanded', 'false'); };
-    const best = q => {
-      const s = q.trim().toLowerCase(); if (!s) return null;
-      return FAQS.find(f => f.q.toLowerCase().includes(s)) || FAQS.find(f => s.includes(f.q.toLowerCase().slice(0,8)));
-    };
-    const renderChips = items => {
-      chips.innerHTML = '';
-      items.forEach(f => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-xs md:btn-sm btn-outline normal-case';
-        btn.textContent = f.q;
-        btn.addEventListener('click', () => { bubble(f.q, 'user'); bubble(f.a, 'bot'); });
-        chips.appendChild(btn);
+
+    function renderChips(filterText = '') {
+      faqChipsContainer.innerHTML = '';
+      const lowerCaseFilter = filterText.toLowerCase();
+      FAQS.forEach(faq => {
+        if (faq.q.toLowerCase().includes(lowerCaseFilter)) {
+          const chip = document.createElement('button');
+          chip.className = 'btn btn-xs md:btn-sm btn-outline normal-case';
+          chip.textContent = faq.q;
+          chip.addEventListener('click', () => {
+            addBubble(faq.q, 'user');
+            addBubble(faq.a, 'bot');
+          });
+          faqChipsContainer.appendChild(chip);
+        }
       });
-    };
+    }
 
-    toggle.addEventListener('click', () => chat.classList.contains('is-open') ? close() : open());
-    closeB.addEventListener('click', close);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && chat.classList.contains('is-open')) close(); });
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const q = input.value.trim(); if (!q) return;
-        bubble(q, 'user'); const hit = best(q);
-        bubble(hit ? hit.a : 'Sorry, I couldn’t find an exact match. Try keywords like “register”, “complaint”, or “document”.', 'bot');
-        input.value = '';
+
+    function toggleChat(show) {
+      if (show) {
+        faqChatWindow.classList.add('is-open');
+        faqNotificationDot.style.display = 'none';
+      } else {
+        faqChatWindow.classList.remove('is-open');
+      }
+    }
+
+
+    function addBubble(message, sender) {
+      const chatClass = (sender === 'user') ? 'chat-end' : 'chat-start';
+      const bubbleClass = (sender === 'user') ? 'bg-[#E7F0F6]' : 'bg-base-300';
+      const messageHTML = `<div class="chat ${chatClass}"><div class="chat-bubble ${bubbleClass}">${message.replace(/\n/g, '<br>')}</div></div>`;
+      faqBody.insertAdjacentHTML('beforeend', messageHTML);
+      faqBody.scrollTop = faqBody.scrollHeight;
+    }
+
+
+    function findBestMatch(userInput) {
+      const lowerCaseInput = userInput.toLowerCase().trim();
+      if (!lowerCaseInput) return null;
+
+
+      // Create a list of all words the user typed
+      const searchWords = lowerCaseInput.split(/\s+/);
+
+
+      const scoredFaqs = FAQS.map(faq => {
+        // Combine the question and its keywords into one searchable string
+        const searchableText = `${faq.q.toLowerCase()} ${faq.keywords.join(' ')}`;
+
+
+        let score = 0;
+        // Check if any of the user's typed words appear in our searchable text
+        searchWords.forEach(word => {
+          if (searchableText.includes(word)) {
+            score++;
+          }
+        });
+
+
+        return { ...faq, score }; // Return the faq with its score
+      })
+        .filter(faq => faq.score > 0) // Keep only FAQs that got a score > 0
+        .sort((a, b) => b.score - a.score); // Sort by the highest score first
+
+
+      // Return the best match (the one with the highest score), or null if no matches
+      return scoredFaqs.length > 0 ? scoredFaqs[0] : null;
+    }
+
+
+    // --- 4. SETUP AND EVENT LISTENERS ---
+
+
+    renderChips();
+
+
+    faqInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        const userInput = faqInput.value;
+        if (!userInput.trim()) return;
+
+
+        addBubble(userInput, 'user');
+        const match = findBestMatch(userInput);
+
+
+        if (match) {
+          addBubble(match.a, 'bot');
+        } else {
+          addBubble("Sorry, I can't answer that question. For further details, please visit the barangay hall or contact us directly.", 'bot');
+        }
+
+
+        faqInput.value = '';
+        renderChips();
       }
     });
-    let t; input.addEventListener('input', e => {
-      clearTimeout(t); const val = e.target.value.toLowerCase();
-      t = setTimeout(() => renderChips(FAQS.filter(f => f.q.toLowerCase().includes(val))), 150);
+
+
+    faqInput.addEventListener('input', () => {
+      renderChips(faqInput.value);
     });
 
-    renderChips(FAQS);
-  </script>
-</body>
-</html>
 
+    faqToggleBtn.addEventListener('click', () => toggleChat(true));
+    faqCloseBtn.addEventListener('click', () => toggleChat(false));
+  });
+</script>
 ======================================================================
 File: resources/views/components/public/footer.blade.php
 ======================================================================
 
 <footer class="bg-[#134573] text-white">
-  <div class="max-w-7xl mx-auto px-6 py-10">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-   
-      <section class="lg:col-span-2">
-        <h6 class="footer-title text-white/90 mb-3">Our Location</h6>
+  <div class="max-w-7xl mx-auto px-0 py-0">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-15 items-center">
 
-        <!-- UPDATED LINK HERE -->
+
+      {{-- OUR LOCATION --}}
+      <section class="lg:col-span-3">
+        <h6 class="text-sm font-bold uppercase tracking-wider text-white/90 mt-2 mb-2">Our Location</h6>
         <a href="https://www.google.com/maps/place/Daang+Bakal+Barangay+Hall/@14.5916363,121.0244769,17.25z/data=!4m6!3m5!1s0x3397c9d1e1d1726f:0xbf347c81708454e1!8m2!3d14.5916105!4d121.0286076!16s%2Fg%2F1pzr9z8pz?entry=ttu"
            target="_blank" rel="noopener"
            class="block group rounded-xl overflow-hidden ring-1 ring-white/20 shadow-lg">
@@ -3272,84 +4289,81 @@ File: resources/views/components/public/footer.blade.php
             src="/img/map.png"
             alt="Map to Barangay Daang Bakal Hall"
             loading="lazy"
-            class="w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]
-                   md:h-[280px] lg:h-[320px]"
-            style="height:clamp(220px, 32vh, 360px);" />
+            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+            style="max-height: 180px;" />
         </a>
       </section>
 
-      <section class="space-y-8">
+
+      {{-- CONTACT & VISIT INFO --}}
+      <section class="lg:col-span-2 space-y-2">
         <nav>
-          <h6 class="footer-title text-white/90 mb-3">Contact Us</h6>
-          <ul class="space-y-3 text-white/90">
+          <h6 class="text-sm font-bold uppercase tracking-wider text-white/90 mt-2 mb-2">Contact Us</h6>
+          <ul class="space-y-3 text-sm text-white/80">
             <li class="flex items-start gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
               <span>553-J. Fabella St., Brgy. Daang Bakal, Mandaluyong City</span>
             </li>
             <li class="flex items-start gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
-              </svg>
-              <a href="tel:+630635353992" class="link link-hover">(+63) 0535-3992</a>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+              <a href="tel:+6305353992" class="link link-hover">(+63) 0535-3992</a>
             </li>
             <li class="flex items-start gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
               <a href="mailto:barangaydaangbakal@gmail.com" class="link link-hover">barangaydaangbakal@gmail.com</a>
             </li>
           </ul>
         </nav>
 
+
         <nav>
-          <h6 class="footer-title text-white/90 mb-3">Visit Us</h6>
-          <ul class="space-y-3 text-white/90">
+          <h6 class="text-sm font-bold uppercase tracking-wider text-white/90 mb-4 mt-4">Visit Us</h6>
+          <ul class="space-y-3 text-sm text-white/80">
             <li class="flex items-start gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clip-rule="evenodd"/>
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
               <span>Monday to Friday: 7:00 AM – 5:00 PM</span>
             </li>
             <li class="flex items-start gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v2.385z"></path>
-              </svg>
-              <a href="#" class="link link-hover pt-1">Barangay Daang Bakal – Sangguniang Kabataan</a>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v2.385z"></path></svg>
+              <a href="#" class="link link-hover">Barangay Daang Bakal Sangguniang Kabataan ng Daang Bakal</a>
             </li>
           </ul>
         </nav>
       </section>
+
+
     </div>
   </div>
 
+
   <div class="footer footer-center p-4 border-t border-white/10">
-    <aside><p>© 2025 ARIS: Automated Record and Information System</p></aside>
+    <aside>
+      <p class="text-xs">© 2025 ARIS: Automated Record and Information System</p>
+    </aside>
   </div>
 </footer>
+
 ======================================================================
 File: resources/views/components/public/hero.blade.php
 ======================================================================
 
-<div class="hero min-h-[70vh] relative" style="background-image: url(/img/home.png);">
-    <div class="hero-overlay bg-opacity-20"></div>
+<div id="hero" class="hero min-h-[70vh] relative" style="background-image: url(/img/home.png);">
+    <div class="hero-overlay bg-opacity-60"></div>
 
-    <!-- Responsive fixed-position text -->
-    <div class="w-full h-64 relative">
-        <p class="absolute top-1/2 -translate-y-1/2 right-10 sm:right-20 md:right-40 lg:right-60 xl:right-80 
-         text-base sm:text-lg md:text-xl font-medium text-white text-right mt-5">
+
+    <div class="absolute top-1/2 -translate-y-1/2 right-10 sm:right-20 md:right-40 lg:right-60 xl:right-80">
+        <p class="text-base sm:text-lg md:text-xl font-medium text-white text-right">
             We Serve and Protect.
         </p>
     </div>
-    <!-- Hero button centered -->
-    <div
-        class="hero-content text-center text-neutral-content relative flex flex-col justify-center items-center w-full">
-        <div class="max-w-2xl">
-            <button class="btn btn-lg bg-blue-700 hover:bg-blue-800 text-white border-none mt-50">
-                REGISTER TO ACCESS BARANGAY SERVICES →
-            </button>
+
+
+    <div class="hero-content flex flex-col justify-end w-full h-full text-center pb-18">
+        <div class="max-w-xl">
+            <a href="{{ route('home') }}"
+                class="btn btn-lg bg-[#A2C4D9C7] text-black hover:bg-[#94B8CC] border-none rounded-full">
+                VIEW ANNOUNCEMENTS &rarr;
+            </a>
         </div>
     </div>
 </div>
@@ -3370,10 +4384,10 @@ File: resources/views/components/public/navbar.blade.php
     </div>
     <div class="navbar-end hidden lg:flex">
         <ul class="menu menu-horizontal px-1 font-semibold">
-            <li><a class="text-slate-50 hover:text-slate-200">Home</a></li>
-            <li><a class="text-slate-50 hover:text-slate-200">Services</a></li>
-            <li><a class="text-slate-50 hover:text-slate-200">About</a></li>
-            <li><a href="#" class="btn btn-primary btn-sm ml-2">Login</a></li>
+            <li><a href="#hero" class="text-slate-50 hover:text-slate-200">Home</a></li>
+            <li><a href="#services" class="text-slate-50 hover:text-slate-200">Services</a></li>
+            <li><a href="#about" class="text-slate-50 hover:text-slate-200">About</a></li>
+            <li><a href="#" class="text-slate-50 hover:text-slate-200 btn-sm ml-2">Login</a></li>
         </ul>
     </div>
     <div class="navbar-end lg:hidden">
@@ -3384,141 +4398,163 @@ File: resources/views/components/public/navbar.blade.php
                 </svg>
             </label>
             <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-[#2E5E85] text-slate-50 rounded-box w-52">
-                <li><a class="hover:text-slate-200">Home</a></li>
-                <li><a class="hover:text-slate-200">Services</a></li>
-                <li><a class="hover:text-slate-200">About</a></li>
-                <li><a href="#" class="hover:text-slate-200">Login</a></li>
+                <li><a href="#hero">Home</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#">Login</a></li>
             </ul>
         </div>
     </div>
 </div>
+
 ======================================================================
 File: resources/views/components/public/officials.blade.php
 ======================================================================
 
-<!-- [START BARANGAY OFFICIALS] -->
-<div class="bg-[#D2E3EE] py-16 px-4 sm:px-8">
+<div class="bg-[#D2E3EE] py-10 px-4 sm:px-8">
     <div class="container mx-auto">
 
-        <!-- Section Heading -->
-        <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12 tracking-wide">
+
+        <h2 class="text-4xl sm:text-4xl font-bold text-center mb-8 tracking-wide">
             BARANGAY OFFICIALS
         </h2>
 
-        <!-- Barangay Captain -->
-        @if($captain)
-        <div class="flex justify-center mb-12">
-            <div class="card bg-base-100 shadow-xl w-80 max-w-xs text-center">
+
+        {{-- Static Captain Section --}}
+        <div class="flex justify-center mb-8"> {{-- Keeping mb-8 here to space the Captain nicely from the title --}}
+            <div class="card bg-base-100 shadow-xl w-70 max-w-xs text-center">
                 <figure class="px-8 pt-8">
-                    <img src="{{ $captain->photo_path ? asset('storage/' . $captain->photo_path) : '/img/kap.jpg' }}" alt="{{ $captain->first_name }} {{ $captain->last_name }}" class="rounded-xl" />
+                    {{-- Static Captain Image --}}
+                    <img src="/img/kap.jpg" alt="Barangay Captain" class="rounded-xl" />
                 </figure>
                 <div class="card-body items-center text-center">
-                    <h3 class="card-title font-bold">{{ $captain->first_name }} {{ $captain->middle_initial }} {{ $captain->last_name }}</h3>
-                    <p class="text-sm font-medium">{{ $captain->position }}</p>
+                    <h3 class="card-title font-bold">Richard B. Bassig</h3>
+                    <p class="text-sm font-medium">Barangay Captain</p>
                 </div>
             </div>
         </div>
-        @endif
-        <!-- End Barangay Captain -->
-
-        <!-- Kagawad Carousel Section -->
-        @if($kagawads->isNotEmpty())
-        <div class="relative w-full max-w-6xl mx-auto">
-            <div id="kagawad-carousel" class="carousel carousel-center w-full p-4 space-x-4 rounded-box">
-                @foreach($kagawads as $kagawad)
+       
+        <div class="relative w-full max-w-7xl mx-auto">
+            {{-- Removed p-4 from the carousel container to start spacing immediately after the Captain --}}
+            <div id="kagawad-carousel" class="carousel carousel-center w-full space-x-8 rounded-box">
+               
+                {{-- Kagawad 1 (Hermino O. Dela Cruz Example) --}}
                 <div class="carousel-item">
-                    <div class="card bg-base-100 shadow-md w-64">
-                        <figure class="px-10 pt-6">
-                            <img src="{{ $kagawad->photo_path ? asset('storage/' . $kagawad->photo_path) : '/img/kagawad-placeholder.jpg' }}" alt="{{ $kagawad->first_name }} {{ $kagawad->last_name }}" class="rounded-xl h-48 w-full object-cover" />
+                    <div class="card bg-base-100 shadow-md w-64 ml-5">
+                        <figure class="px-8 pt-6">
+                            <img src="https://scontent.fmnl4-4.fna.fbcdn.net/v/t1.15752-9/582018165_1210464940988259_8180293860543631282_n.png?_nc_cat=100&ccb=1-7&_nc_sid=9f807c&_nc_eui2=AeGEZ-y2AY4dKz4Wdo62oRfMG11jvCMIjd4bXWO8IwiN3qPXsn08XAvMPdtelF_r6si83ZwsNqEHm90X4Jh-HhIJ&_nc_ohc=51bNZdgwWW4Q7kNvwFUxVm6&_nc_oc=AdmwQE4ecP00GoZbbmXEJ-6ZwKhPWIPYVEOizVHFLavASPlh4ujISi6aeeQ71DgO3Wlz21XoNsksTQ-gApYSt8kR&_nc_zt=23&_nc_ht=scontent.fmnl4-4.fna&oh=03_Q7cD3wE0xVXPJMVi4wJm8Qjbco9prkZzGYSlQvjWwciAu-rIdA&oe=6943A83F" alt="Kagawad 1" class="rounded-xl h-55 w-60 object-cover"/>
                         </figure>
                         <div class="card-body items-center text-center p-4">
-                            <h3 class="card-title text-base font-bold">{{ $kagawad->first_name }} {{ $kagawad->middle_initial }} {{ $kagawad->last_name }}</h3>
-                            <p class="text-s space-x-4 font-medium">{{ $kagawad->position }}</p>
+                            <h3 class="card-title text-base font-semibold">Hermino O. Dela Cruz</h3>
+                            <p class="text-s space-x-4 font-medium">Barangay Kagawad</p>
                         </div>
                     </div>
                 </div>
-                @endforeach
+
+
+                {{-- Kagawad 2 --}}
+                  <div class="carousel-item">
+                    <div class="card bg-base-100 shadow-md w-64 mr-2">
+                        <figure class="px-8 pt-6">
+                            <img src="https://scontent.fmnl4-4.fna.fbcdn.net/v/t1.15752-9/578823699_679250648372124_2396603277643124040_n.png?_nc_cat=102&ccb=1-7&_nc_sid=9f807c&_nc_eui2=AeHHXjWFxX3Y7tWswywoc9LQ5KmBU1pCtz_kqYFTWkK3PycFA6-5WxzSHTnPAM9hVLfKYwPlW_pF2gQEz5fAOiDn&_nc_ohc=l6lyREeLp7oQ7kNvwEjgiZO&_nc_oc=AdmsTcqpC9FQDccEg6ZGZbyqIBVf3W5Emr2-4q5FelV1lSeuKawe3-gsoMLaa7e5A5_b2Y2Dt3Abl99ghEoX5Sai&_nc_zt=23&_nc_ht=scontent.fmnl4-4.fna&oh=03_Q7cD3wEoAyPXSEiszih9189w4yGxp7ydYHVz7cLeuXnaMzVxOA&oe=694394DC" alt="Kagawad 1" class="rounded-xl h-55 w-60 object-cover" />
+                        </figure>
+                        <div class="card-body items-center text-center p-4">
+                            <h3 class="card-title text-base font-semibold">Angelo Cesar S. Barretto</h3>
+                            <p class="text-s space-x-4 font-medium">Barangay Kagawad</p>
+                        </div>
+                    </div>
+                </div>
+               
+                {{-- Kagawad 3 --}}
+                  <div class="carousel-item">
+                    <div class="card bg-base-100 shadow-md w-64 mr-2">
+                        <figure class="px-8 pt-6">
+                            <img src="https://scontent.fmnl4-2.fna.fbcdn.net/v/t1.15752-9/578731008_2209389612919929_8114556832687415373_n.png?_nc_cat=101&ccb=1-7&_nc_sid=9f807c&_nc_eui2=AeHRe0G09rnk1U8HyKLeqIewcyYDy-l1gMFzJgPL6XWAwRsGvY4hObGGMGqx5jiT2RKRO8jvd6peSrIGrNfy4mUJ&_nc_ohc=Rm_0mJ13DFUQ7kNvwEdGP5i&_nc_oc=AdlJvGRHDGXSoHhf8VDMRQFGf0R9WinilMx2Fu4m9KJKG9DggTkr2eVObEcfI9uoVtRfri2sbgXSn59QMeh8OKf4&_nc_zt=23&_nc_ht=scontent.fmnl4-2.fna&oh=03_Q7cD3wHMCFZJYoAuLaiM7vlVAQmazHD16ZMZaqQtQ29I6d1vzQ&oe=69439FC2" alt="Kagawad 1" class="rounded-xl h-55 w-60 object-cover" />
+                        </figure>
+                        <div class="card-body items-center text-center p-4">
+                            <h3 class="card-title text-base font-semibold">Aeron James C. Ingua</h3>
+                            <p class="text-s space-x-4 font-medium">Barangay Kagawad</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                {{-- Kagawad 4 --}}
+                   <div class="carousel-item">
+                    <div class="card bg-base-100 shadow-md w-64">
+                        <figure class="px-8 pt-6">
+                            <img src="https://scontent.fmnl4-7.fna.fbcdn.net/v/t1.15752-9/582430510_1547503546599772_826143542478139071_n.png?_nc_cat=108&ccb=1-7&_nc_sid=9f807c&_nc_eui2=AeFZZYihqo6V8dxqpE-WzdSa9uNA6vm5Zmz240Dq-blmbCymaWf5_QqFMQgn6KcZMu7717vNar8C-vMusPK6Q68I&_nc_ohc=5RsdG-s0GAwQ7kNvwG_IL-b&_nc_oc=AdmH4FPcWy71fmWMDu0haQ9EiTvDRKDT7c0-nTjvRuSPlWn7RIdZfWvXYsHTvRLcpiQI5GgLvu_HxnCeT1LiAGhN&_nc_zt=23&_nc_ht=scontent.fmnl4-7.fna&oh=03_Q7cD3wG-i3Py-W7eYdVVdiNaf8kFtnaEyyNZr6E2pK34sO522Q&oe=69437FD8" alt="Kagawad 1" class="rounded-xl h-55 w-60 object-cover" />
+                        </figure>
+                        <div class="card-body items-center text-center p-4">
+                            <h3 class="card-title text-base font-semibold">John Paul A. Bulos</h3>
+                            <p class="text-s space-x-4 font-medium">Barangay Kagawad</p>
+                        </div>
+                    </div>
+                </div>
+               
+                {{-- Kagawad 5 --}}
+                  <div class="carousel-item">
+                    <div class="card bg-base-100 shadow-md w-64">
+                        <figure class="px-8 pt-6">
+                            <img src="https://scontent.fmnl4-6.fna.fbcdn.net/v/t1.15752-9/581988518_2021745981996140_1793409315719316420_n.png?_nc_cat=111&ccb=1-7&_nc_sid=9f807c&_nc_eui2=AeFYmzMPwVJMGzIOEnSYaKQ1PFwicwsbl448XCJzCxuXjr_M2p4T8e5YveHGdkMH1i9sQCXibMRGy2ownMnWoUzO&_nc_ohc=TQqmSmAmPeYQ7kNvwFXUW0o&_nc_oc=Adlt47fU2zuGMSsFx7aJy-OVqaOU8RVxpCVg55Hq5B4c9aSpJs7xxTCqGbq4ynCkgCHcvN-mAWCxx7ZB0FdmqHJr&_nc_zt=23&_nc_ht=scontent.fmnl4-6.fna&oh=03_Q7cD3wHfvwY2rP-742MRe0UEgg9C9Y2xzIBvoE7BjiJmCAr2Wg&oe=69439B42" alt="Kagawad 1" class="rounded-xl h-55 w-60 object-cover" />
+                        </figure>
+                        <div class="card-body items-center text-center p-4">
+                            <h3 class="card-title text-base font-semibold">Patrocinia E. Claudio</h3>
+                            <p class="text-s space-x-4 font-medium">Barangay Kagawad</p>
+                        </div>
+                    </div>
+                </div>
+                {{-- Kagawad 6 --}}
+                   <div class="carousel-item">
+                    <div class="card bg-base-100 shadow-md w-64">
+                        <figure class="px-8 pt-6">
+                            <img src="https://scontent.fmnl4-1.fna.fbcdn.net/v/t1.15752-9/582328251_1531464928119042_3894313545446648179_n.png?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_eui2=AeHET3oiAMccNYjt60t4_oe2uG0XVqo5FAi4bRdWqjkUCGDH457eB4OMm4QOa1egNH7zD003I7JoCt_sjKTZtWxi&_nc_ohc=1HQJOwc1dr0Q7kNvwG-weFb&_nc_oc=AdkxQGIluSVCemfsFuvEc9MkOy6RyWatNj6LQe-uk7QbKdiYO8gumV6GcOMbJMkmQHCEMlRvRLFmcCNz3SNGoFQC&_nc_zt=23&_nc_ht=scontent.fmnl4-1.fna&oh=03_Q7cD3wETUYcEVyA7bGEQ7LFCVTAAVwBCPfrUEa5gEOsYKFR8DA&oe=6943A86F" alt="Kagawad 1" class="rounded-xl h-55 w-60 object-cover" />
+                        </figure>
+                        <div class="card-body items-center text-center p-4">
+                            <h3 class="card-title text-base font-semibold">Joseph S. Porcalla</h3>
+                            <p class="text-s space-x-4 font-medium">Barangay Kagawad</p>
+                        </div>
+                    </div>
+                </div>
+               
+                {{-- Kagawad 7 --}}
+                   <div class="carousel-item">
+                    <div class="card bg-base-100 shadow-md w-64">
+                        <figure class="px-8 pt-6">
+                            <img src="https://scontent.fmnl4-3.fna.fbcdn.net/v/t1.15752-9/582229031_854724507051184_2429386195480127403_n.png?_nc_cat=110&ccb=1-7&_nc_sid=9f807c&_nc_eui2=AeE4eNEMowBOOombKCz7cz2GDNNoDah_B9sM02gNqH8H25-xGJcwMdyZI4vnTOB5-gjYTnqRXJ83ETTlqyASdXr-&_nc_ohc=AXYDOVcG368Q7kNvwGBqj-Q&_nc_oc=Adndu1ChcHMFIFhJvqG8mc0RWbbStPejgKtJsNqxlJ9_f0CfGZOuQcMhDvuQ73TGbvt-6NOtADI0Y79lgit69BcJ&_nc_zt=23&_nc_ht=scontent.fmnl4-3.fna&oh=03_Q7cD3wHFrL5rzaEQZG1CzX5YejVfCp15rPMvavakeXbpNbNyvg&oe=69439F43" alt="Kagawad 1" class="rounded-xl h-55 w-60 object-cover" />
+                        </figure>
+                        <div class="card-body items-center text-center p-4">
+                            <h3 class="card-title text-base font-semibold">Redd Louise T. Abanes</h3>
+                            <p class="text-s space-x-4 font-medium">Barangay Kagawad</p>
+                        </div>
+                    </div>
+                </div>
+
+
             </div>
-            <!-- Carousel Navigation Buttons -->
-             <button id="prev-btn" class="btn btn-circle btn-ghost absolute top-1/2 -translate-y-1/2 left-0 sm:-left-4">❮</button>
+           
+            <button id="prev-btn" class="btn btn-circle btn-ghost absolute top-1/2 -translate-y-1/2 left-0 sm:-left-4">❮</button>
             <button id="next-btn" class="btn btn-circle btn-ghost absolute top-1/2 -translate-y-1/2 right-0 sm:-right-4">❯</button>
         </div>
-        @endif
+        {{-- Note: The <style> and <script> blocks from the original file are kept below to retain the carousel functionality --}}
     </div>
 </div>
 
-<!-- Add this style tag for the grabbing cursor effect -->
-<style>
-    #kagawad-carousel {
-        cursor: grab;
-        user-select: none; /* Prevents text selection while dragging */
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-    }
-    #kagawad-carousel.active {
-        cursor: grabbing;
-    }
-</style>
-
-<!-- MODIFIED JavaScript for Draggable Carousel -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const carousel = document.getElementById('kagawad-carousel');
-        if (!carousel) return;
-
-        // --- 1. Existing Button Logic ---
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        if (prevBtn && nextBtn) {
-            nextBtn.addEventListener('click', () => carousel.scrollBy({ left: carousel.clientWidth, behavior: 'smooth' }));
-            prevBtn.addEventListener('click', () => carousel.scrollBy({ left: -carousel.clientWidth, behavior: 'smooth' }));
-        }
-
-        // --- 2. New Draggable Logic ---
-        let isDown = false;
-        let startX;
-        let scrollLeft;
-
-        carousel.addEventListener('mousedown', (e) => {
-            isDown = true;
-            carousel.classList.add('active');
-            startX = e.pageX - carousel.offsetLeft;
-            scrollLeft = carousel.scrollLeft;
-        });
-
-        carousel.addEventListener('mouseleave', () => {
-            isDown = false;
-            carousel.classList.remove('active');
-        });
-
-        carousel.addEventListener('mouseup', () => {
-            isDown = false;
-            carousel.classList.remove('active');
-        });
-
-        carousel.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            e.preventDefault();
-            const x = e.pageX - carousel.offsetLeft;
-            const walk = (x - startX) * 2; // Multiplier makes dragging feel more responsive
-            carousel.scrollLeft = scrollLeft - walk;
-        });
-    });
-</script>
-<!-- [END BARANGAY OFFICIALS] -->
 ======================================================================
 File: resources/views/components/public/services.blade.php
 ======================================================================
 
-<div class="bg-[#E7F0F6] py-16 px-4 sm:px-8">
+<div id="services" class="bg-[#A2C4D9]/50 py-16 px-4 sm:px-8">
     <div class="container mx-auto">
+
 
         <h2 class="text-4xl sm:text-4xl font-bold text-center mb-12 tracking-wide">
             BARANGAY SERVICES
         </h2>
 
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+
 
             <div class="card shadow-lg rounded-lg p-6 flex flex-col items-center text-center" style="background-color: #de9f98;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Barangay Clearance</h3>
@@ -3530,6 +4566,7 @@ File: resources/views/components/public/services.blade.php
                 </p>
             </div>
 
+
             <div class="card shadow-lg rounded-lg text-slate-800 p-6 flex flex-col items-center text-center" style="background-color: #8f94ac;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Barangay Certificate</h3>
                 <figure class="mb-4 h-40 w-full">
@@ -3539,6 +4576,7 @@ File: resources/views/components/public/services.blade.php
                     A Barangay Certificate is an official document issued for various purposes, such as proof of identity, residency, or other personal declarations. It serves as formal confirmation of information verified by the barangay.
                 </p>
             </div>
+
 
             <div class="card shadow-lg rounded-lg text-slate-800 p-6 flex flex-col items-center text-center" style="background-color: #ba9f76;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Indigency Clearance</h3>
@@ -3550,6 +4588,7 @@ File: resources/views/components/public/services.blade.php
                 </p>
             </div>
 
+
             <div class="card shadow-lg rounded-lg text-slate-800 p-6 flex flex-col items-center text-center" style="background-color: #80512c;">
                 <h3 class="font-bold uppercase mb-4 h-12 flex items-center text-white">Resident Certificate</h3>
                 <figure class="mb-4 h-40 w-full">
@@ -3560,10 +4599,15 @@ File: resources/views/components/public/services.blade.php
                 </p>
             </div>
 
+
         </div>
+
 
     </div>
 </div>
+
+
+
 ======================================================================
 File: resources/views/home.blade.php
 ======================================================================
@@ -3599,79 +4643,94 @@ File: resources/views/layouts/admin.blade.php
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<title>@yield('title', 'Admin Panel') | Barangay Daang Bakal</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-@vite(['resources/css/app.css', 'resources/js/app.js'])
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>@yield('title', 'Admin Panel') | Barangay Daang Bakal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  @vite([
+    'resources/css/app.css',
+    'resources/css/custom.css',
+    'resources/js/app.js'
+  ])
 </head>
+
 <body>
-<div class="app">
-  <header class="topbar">
-    <div class="brand">
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
         <img src="{{ asset('img/mandaluyonglogo.jpg') }}" alt="Mandaluyong Logo">
         <img src="{{ asset('img/barangaylogo.jpg') }}" alt="Barangay Logo">
         <div class="meta">
-            <span>Barangay Daang Bakal</span>
-            <span>Mandaluyong City</span>
+          <span>Barangay Daang Bakal</span>
+          <span>Mandaluyong City</span>
         </div>
-    </div>
-    <div class="top-actions">
-      <button class="text-white text-xl p-2 rounded-full hover:bg-white/10 transition-colors">
-        <i class="fa-regular fa-bell"></i>
-      </button>
-      <div class="user-dropdown">
-        <div class="w-9 h-9 rounded-full bg-gray-200 grid place-items-center cursor-pointer">
-            <i class="fa-solid fa-user text-gray-700"></i>
-        </div>
-        <div class="dropdown-menu"><a href="{{ route('admin.users.create') }}">User Profile</a><form method="POST" action=""><button type="submit">Logout</button></form></div>
       </div>
-    </div>
-  </header>
-  <aside class="sidebar" id="sidebar"> 
-    <div class="toggle">
+      <div class="top-actions">
+        <button class="text-white text-xl p-2 rounded-full hover:bg-white/10 transition-colors">
+          <i class="fa-regular fa-bell"></i>
+        </button>
+        <div class="user-dropdown">
+          <div class="w-9 h-9 rounded-full bg-gray-200 grid place-items-center cursor-pointer">
+            <i class="fa-solid fa-user text-gray-700"></i>
+          </div>
+          <div class="dropdown-menu"><a href="#">User Profile</a>
+            <form method="POST" action=""><button type="submit">Logout</button></form>
+          </div>
+        </div>
+      </div>
+    </header>
+    <aside class="sidebar" id="sidebar">
+      <div class="toggle">
         <button id="sidebar-toggle" class="hamburger-btn"></button>
-    </div>
-    <nav class="nav">
-      <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="fa-solid fa-table-columns"></i><span>Dashboard</span></a>
-      <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="fa-solid fa-users"></i><span>Users</span></a>
-      <a href="#"><i class="fa-solid fa-file-lines"></i><span>Document Request</span></a>
-      <a href="#"><i class="fa-solid fa-file-pen"></i><span>Complaints</span></a>
-      <a href="#"><i class="fa-solid fa-user-tie"></i><span>Staffs</span></a>
-      <a href="{{ route('admin.officials.index') }}" class="{{ request()->routeIs('admin.officials.*') ? 'active' : '' }}"><i class="fa-solid fa-user-group"></i><span>Barangay Officials</span></a>
-      <a href="{{ route('admin.announcements.index') }}" class="{{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}"><i class="fa-solid fa-bullhorn"></i><span>Announcements</span></a>
-      <a href="#"><i class="fa-solid fa-chart-line"></i><span>Reports & Analytics</span></a>
-      <a href="#"><i class="fa-solid fa-desktop"></i><span>Audit Logs</span></a>
-    </nav>
-  </aside>
-  <main class="content">
-    @yield('content')
-  </main>
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const app = document.querySelector('.app');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+      </div>
+      <nav class="nav">
 
-    if (sidebarToggle) {
+                   <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="fa-solid fa-table-columns"></i><span>Dashboard</span></a>
+        <a href="#" class=""><i class="fa-solid fa-users"></i><span>Users</span></a>
+        <a href="#"><i class="fa-solid fa-file-lines"></i><span>Document Request</span></a>
+        <a href="#"><i class="fa-solid fa-file-pen"></i><span>Complaints</span></a>
+        <a href="#"><i class="fa-solid fa-user-tie"></
+ i        ><span>Staffs</span></a>
+
+                   <a href="{{ route('admin.officials.index') }}" cla
+        s s="{{ request()->routeIs('admin.officials.*') ? 'active' : '' }}"><i class="
+     f      a-solid fa-user-group"></i><span>Barangay Officials</span></a>
+        <a href="{{ route('admin.announcements.index') }}" class="{{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}"><i class="fa-solid fa-bullhorn"></i><span>Announcements</span></a>
+        <a href="#"><i class="fa-solid fa-chart-line"></i><span>Reports & Analytics</span></a>
+        <a href="#"><i class="fa-solid fa-desktop"></i><span>Audit Logs</span></a>
+      </nav>
+    </aside>
+    <main class="content">
+      @yield('content')
+    </main>
+  </div>
+  <script>
+     document.addEventListener('DOMContentLoaded', function() {
+      const app = document.querySelector('.app');
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+
+      if (sidebarToggle) {
         sidebarToggle.addEventListener('click', () => {
-            app.classList.toggle('sidebar-collapsed');
+          app.classList.toggle('sidebar-collapsed');
         });
-    }
-});
-</script>
-@stack('scripts')
+      }
+    });
+  </script>
+  @stack('scripts')
 </body>
+
 </html>
 ======================================================================
 File: resources/views/layouts/app.blade.php
 ======================================================================
 
 <!DOCTYPE html>
-<html lang="en" data-theme="light"> 
+<html lang="en" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3679,15 +4738,23 @@ File: resources/views/layouts/app.blade.php
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite([
+        'resources/css/app.css',
+        'resources/css/custom.css', 
+        'resources/js/app.js'
+    ])
 </head>
+
 <body class="bg-base-200 font-sans">
-    
+
     @yield('content')
 
 </body>
+
 </html>
 ======================================================================
 File: resources/views/layouts/public.blade.php
@@ -3696,15 +4763,15 @@ File: resources/views/layouts/public.blade.php
 @extends('layouts.app')
 
 @section('content')
-    <!-- Page specific content will go here -->
-    <div class="container mx-auto p-4">
-         @yield('page-content')
-    </div>
 
-    <!-- DaisyUI Footer -->
-    <footer class="footer p-10 bg-neutral text-neutral-content">
-        <!-- Add footer content here -->
-    </footer>
+<div class="container mx-auto p-4">
+    @yield('page-content')
+</div>
+
+<!-- DaisyUI Footer -->
+<footer class="footer p-10 bg-neutral text-neutral-content">
+    
+</footer>
 @endsection
 ======================================================================
 File: routes/console.php
@@ -3728,40 +4795,24 @@ File: routes/web.php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Auth\LoginController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
-
-// Public Routes
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/announcements/{announcement}', [PageController::class, 'showAnnouncement'])->name('announcements.show');
 
-// Admin Routes (Authentication Removed for Development)
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
 
-    // Users
-    Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');
-    Route::get('/users/create', [AdminController::class, 'usersCreate'])->name('users.create');
-    Route::post('/users', [AdminController::class, 'usersStore'])->name('users.store');
-    Route::get('/users/{user}', [AdminController::class, 'usersShow'])->name('users.show');
+    // // Users
+    // Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');
+    // Route::get('/users/create', [AdminController::class, 'usersCreate'])->name('users.create');
+    // Route::post('/users', [AdminController::class, 'usersStore'])->name('users.store');
+    // Route::get('/users/{user}', [AdminController::class, 'usersShow'])->name('users.show');
 
-    // Announcements (Routes for separate pages removed)
     Route::get('/announcements', [AdminController::class, 'announcementsIndex'])->name('announcements.index');
     Route::post('/announcements', [AdminController::class, 'announcementsStore'])->name('announcements.store');
     Route::put('/announcements/{announcement}', [AdminController::class, 'announcementsUpdate'])->name('announcements.update');
     Route::delete('/announcements/{announcement}', [AdminController::class, 'announcementsDestroy'])->name('announcements.destroy');
 
-    // Officials (Routes for separate pages removed)
     Route::get('/officials', [AdminController::class, 'officialsIndex'])->name('officials.index');
     Route::post('/officials', [AdminController::class, 'officialsStore'])->name('officials.store');
     Route::put('/officials/{official}', [AdminController::class, 'officialsUpdate'])->name('officials.update');
@@ -3794,16 +4845,19 @@ export default {
 File: vite.config.js
 ======================================================================
 
+// vite.config.js
+
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: [
+                'resources/css/app.css', // <-- Check if this path exists
+                'resources/js/app.js',   // <-- Check if this path exists
+            ],
             refresh: true,
         }),
-        tailwindcss(),
     ],
 });

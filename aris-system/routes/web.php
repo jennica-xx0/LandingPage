@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/announcements/{announcement}', [PageController::class, 'showAnnouncement'])->name('announcements.show');
