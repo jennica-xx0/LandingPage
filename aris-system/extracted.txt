@@ -2045,7 +2045,15 @@ Disallow:
 File: resources/css/app.css
 ======================================================================
 
+html {
+    scroll-behavior: smooth;
+}
+
 @import "tailwindcss";
+@source "../**/*.blade.php";
+@source "../**/*.js";
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
+@source "../../storage/framework/views/*.php";
 
 @plugin "daisyui";
 
@@ -2083,6 +2091,7 @@ File: resources/css/app.css
   --depth: 0;
   --noise: 0;
 }
+
 ======================================================================
 File: resources/js/app.js
 ======================================================================
@@ -4651,11 +4660,7 @@ File: resources/views/layouts/admin.blade.php
   <title>@yield('title', 'Admin Panel') | Barangay Daang Bakal</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  @vite([
-    'resources/css/app.css',
-    'resources/css/custom.css',
-    'resources/js/app.js'
-  ])
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body>
@@ -4688,17 +4693,12 @@ File: resources/views/layouts/admin.blade.php
         <button id="sidebar-toggle" class="hamburger-btn"></button>
       </div>
       <nav class="nav">
-
-                   <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="fa-solid fa-table-columns"></i><span>Dashboard</span></a>
+        <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="fa-solid fa-table-columns"></i><span>Dashboard</span></a>
         <a href="#" class=""><i class="fa-solid fa-users"></i><span>Users</span></a>
         <a href="#"><i class="fa-solid fa-file-lines"></i><span>Document Request</span></a>
         <a href="#"><i class="fa-solid fa-file-pen"></i><span>Complaints</span></a>
-        <a href="#"><i class="fa-solid fa-user-tie"></
- i        ><span>Staffs</span></a>
-
-                   <a href="{{ route('admin.officials.index') }}" cla
-        s s="{{ request()->routeIs('admin.officials.*') ? 'active' : '' }}"><i class="
-     f      a-solid fa-user-group"></i><span>Barangay Officials</span></a>
+        <a href="#"><i class="fa-solid fa-user-tie"></i><span>Staffs</span></a>
+        <a href="{{ route('admin.officials.index') }}" class="{{ request()->routeIs('admin.officials.*') ? 'active' : '' }}"><i class="fa-solid fa-user-group"></i><span>Barangay Officials</span></a>
         <a href="{{ route('admin.announcements.index') }}" class="{{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}"><i class="fa-solid fa-bullhorn"></i><span>Announcements</span></a>
         <a href="#"><i class="fa-solid fa-chart-line"></i><span>Reports & Analytics</span></a>
         <a href="#"><i class="fa-solid fa-desktop"></i><span>Audit Logs</span></a>
@@ -4709,7 +4709,7 @@ File: resources/views/layouts/admin.blade.php
     </main>
   </div>
   <script>
-     document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
       const app = document.querySelector('.app');
       const sidebarToggle = document.getElementById('sidebar-toggle');
 
@@ -4729,30 +4729,38 @@ File: resources/views/layouts/app.blade.php
 ======================================================================
 
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
-
+<html lang="en" data-theme="Project_tracker">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'ARIS - Barangay Daang Bakal')</title>
+  <meta charset="UTF-8">
+  <title>Barangay Daang Bakal</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
-        rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    @vite([
-        'resources/css/app.css',
-        'resources/css/custom.css', 
-        'resources/js/app.js'
-    ])
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 2. Configure Tailwind with both font families -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Poppins', 'sans-serif'],
+            barlow: ['Barlow Semi Condensed', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
-<body class="bg-base-200 font-sans">
-
-    @yield('content')
-
+<body class="bg-gray-100 bg-base-200 font-sans"> <!-- Poppins will be the default font for the whole page -->
+  @yield('content')
 </body>
 
 </html>
@@ -4823,41 +4831,48 @@ File: tailwind.config.js
 ======================================================================
 
 /** @type {import('tailwindcss').Config} */
-const defaultTheme = require('tailwindcss/defaultTheme');
-
 export default {
   content: [
     "./resources/**/*.blade.php",
     "./resources/**/*.js",
+    "./vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php",
   ],
   theme: {
-    extend: {
-      fontFamily: {
-        sans: ['"Barlow Semi Condensed"', ...defaultTheme.fontFamily.sans],
-        serif: ['"Barlow Semi Condensed"', ...defaultTheme.fontFamily.serif],
-        mono: ['"Barlow Semi Condensed"', ...defaultTheme.fontFamily.mono],
-      },
-    },
+    extend: {},
   },
-  plugins: [require("daisyui")],
+  plugins: [
+    require('daisyui'),
+  ],
+
+  // Add this section to enable your theme
+  daisyui: {
+    themes: [
+      {
+        Project_tracker: { // Must match the name from your app.css
+          "base-100": "oklch(98% 0.001 106.423)",
+          "base-content": "oklch(21% 0.006 56.043)",
+          "primary": "rgb(255, 225, 1)",
+          "secondary": "rgb(35, 44, 84)",
+          // Add any other colors from your theme here
+        },
+      },
+    ],
+  },
 }
 ======================================================================
 File: vite.config.js
 ======================================================================
 
-// vite.config.js
-
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     plugins: [
         laravel({
-            input: [
-                'resources/css/app.css', // <-- Check if this path exists
-                'resources/js/app.js',   // <-- Check if this path exists
-            ],
+            input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
         }),
+        tailwindcss(),
     ],
 });

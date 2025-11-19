@@ -1,16 +1,13 @@
-// vite.config.js
-
-import { defineConfig } from 'vite' // <-- ADD THIS LINE
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  // Your existing configuration content goes here
-  plugins: [
-    // ... your plugins
-  ],
-  server: {
-    // If you added this previously, keep it:
-    hmr: {
-      overlay: false,
-    }
-  }
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.js'],
+            refresh: true,
+        }),
+        tailwindcss(),
+    ],
 });
